@@ -27,7 +27,7 @@ if ( !defined( 'RESCUE_ORPHANED_BLOGS' ) )
 /* blog options affected by URL */
 $options_list = array( 'siteurl', 'home', 'fileupload_url' );
 
-/* networkmeta options to be copied on clone */
+/* sitemeta options to be copied on clone */
 $options_to_copy = array(
 	'admin_email'				=> __( 'Network admin email' ),
 	'admin_user_id'				=> __( 'Admin user ID - deprecated' ),
