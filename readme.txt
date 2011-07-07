@@ -1,8 +1,8 @@
 === WP Multi Network ===
-Contributors: johnjamesjacoby
+Contributors: johnjamesjacoby, BrianLayman
 Tags: network, blogs, sites, domains, fun
-Requires at least: WordPress 3.0-beta-1
-Tested up to: WordPress 3.0-trunk
+Requires at least: WordPress 3.0
+Tested up to: WordPress 3.2
 Stable tag: 1.1
 
 == Description ==
@@ -38,6 +38,11 @@ I am most likely to be found on the BuddyPress support forums website: http://bu
 Not much to talk about really. Check the code for details!
 
 == Changelog ==
+
+* 1.2 - Implemented 3.1 Network Admin Menu, backwards compatiblity maintained.
+		Fixed multiple minor issues;
+		Added Site Admin and Network Admin to Network lists
+		Added various security and bullet proofing
 
 * 1.1 - Make more compatible with WP3.0 Beta
 

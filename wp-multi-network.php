@@ -1,17 +1,39 @@
 <?php
 /**
 Plugin Name: WP Multi-Network
-Plugin URI: http://johnjamesjacoby.com
+Plugin URI: http://wordpress.org/extend/plugins/wp-multi-network/
 Description: Adds a Network Management UI for super admins in a WordPress Multisite environment
-Version: 1.1
-Author: John James Jacoby
-Author URI: http://johnjamesjacoby.com
+Version: 1.2
+Author: Brian Layman
+Author URI: http://WebDevStudios.com
 Tags: multi, site, network, blog, domain
 */
 
-/* Plugin originally created by David Dean, refreshed by John James Jacoby for WP3.0 */
+/* ========================================================================== */
 
-/* true = enable the holding network, must be true to save orphaned blogs, below */
+/*
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
+ /* Plugin originally created by David Dean,
+	Refreshed by John James Jacoby for WP3.0,
+	Refreshed by Brian Layman for WP3.1+ 
+	See readme.txt for */
+ 
+ 
+ /* true = enable the holding network, must be true to save orphaned blogs, below */
 if ( !defined( 'ENABLE_NETWORK_ZERO' ) )
 	define( 'ENABLE_NETWORK_ZERO', true );
 
@@ -68,7 +90,6 @@ if ( !function_exists( 'wpmn_are_new_wpdb_funcs_available' ) ) {
 if ( !function_exists( 'wpmn_network_exists' ) ) {
 	function wpmn_network_exists( $site_id ) {
 		global $sites, $wpdb;
-
 		$site_id = (int)$site_id;
 
 		$sites = (array)$sites;
@@ -78,7 +99,7 @@ if ( !function_exists( 'wpmn_network_exists' ) ) {
 		}
 
 		/* check db just to be sure */
-		$network_list = $wpdb->get_results( 'SELECT id FROM ' . $wpdb->site );
+		$network_list = $wpdb->get_results( $wpdb->prepare('SELECT id FROM ' . $wpdb->site ));
 		if ( $network_list ) {
 			foreach( $network_list as $network ) {
 				if ( $network->id == $site_id )
@@ -138,7 +159,8 @@ if ( !function_exists( 'wpmn_switch_to_network' ) ) {
  */
 if ( !function_exists( 'wpmn_restore_current_network' ) ) {
 	function wpmn_restore_current_network() {
-		global $old_network_details, $wpdb, $site_id, $switched_network, $switched_network_stack;
+		global $old_network_details, $wpdb, $site_id, $switched_network, 
+				$switched_network_stack, $current_site;
 
 		if ( !$switched_network )
 			return;
@@ -148,7 +170,7 @@ if ( !function_exists( 'wpmn_restore_current_network' ) ) {
 		if ( $site_id == $current_site->id )
 			return;
 
-		$prev_site_id = $wpdb->site_id;
+		$prev_site_id = $wpdb->siteid;
 
 		$wpdb->siteid = $site_id;
 		$current_site->id = $old_network_details[ 'id' ];
@@ -184,7 +206,7 @@ if ( !function_exists( 'wpmn_add_network' ) ) {
 			$options_to_clone = array_keys( $options_to_copy );
 
 		$query = "SELECT * FROM {$wpdb->site} WHERE domain='" . $wpdb->escape( $domain ) . "' AND path='" . $wpdb->escape( $path ) . "' LIMIT 1";
-		$network = $wpdb->get_row( $query );
+		$network = $wpdb->get_row( $wpdb->prepare( $query ) );
 
 		if ( $network )
 			return new WP_Error( 'wpmn_network_exists', __( 'Network already exists.' ) );
@@ -198,12 +220,12 @@ if ( !function_exists( 'wpmn_add_network' ) ) {
 			$new_network_id =  $wpdb->insert_id;
 		} else {
 			$query = "INSERT INTO {$wpdb->site} (domain, path) VALUES ('" . $wpdb->escape( $domain ) . "','" . $wpdb->escape( $path ) . "')";
-			$wpdb->query( $query );
+			$wpdb->query( $wpdb->prepare( $query ) );
 			$new_network_id =  $wpdb->insert_id;
 		}
 
 		/* update network list */
-		$sites = $wpdb->get_results( 'SELECT * FROM ' . $wpdb->site );
+		$sites = $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM ' . $wpdb->site ) );
 
 		if ( $new_network_id ) {
 
@@ -261,7 +283,7 @@ if ( !function_exists( 'wpmn_update_network' ) ) {
 			return new WP_Error( 'network_not_exist', __( 'Network does not exist.' ) );
 
 		$query = "SELECT * FROM {$wpdb->site} WHERE id=" . (int)$id;
-		$network = $wpdb->get_row($query);
+		$network = $wpdb->get_row( $wpdb->prepare( $query ) );
 		if ( !$network )
 			return new WP_Error('network_not_exist',__('Network does not exist.'));
 
@@ -283,7 +305,7 @@ if ( !function_exists( 'wpmn_update_network' ) ) {
 				$query .= ", path='" . $path . "' ";
 
 			$query .= ' WHERE id=' . (int)$id;
-			$update_result = $wpdb->query( $query );
+			$update_result = $wpdb->query( $wpdb->prepare( $query ) );
 		}
 
 		if ( !$update_result )
@@ -295,7 +317,7 @@ if ( !function_exists( 'wpmn_update_network' ) ) {
 
 		/** also updated any associated blogs */
 		$query = "SELECT * FROM {$wpdb->blogs} WHERE site_id=" . (int)$id;
-		$sites = $wpdb->get_results( $query );
+		$sites = $wpdb->get_results( $wpdb->prepare( $query ) );
 
 		if ( $sites ) {
 			foreach( $sites as $site ) {
@@ -313,14 +335,14 @@ if ( !function_exists( 'wpmn_update_network' ) ) {
 					);
 				} else {
 					$query = "UPDATE {$wpdb->blogs} SET domain='" . $domain . "', path='" . $path . "' WHERE blog_id=" . (int)$site->blog_id;
-					$wpdb->query( $query );
+					$wpdb->query( $wpdb->prepare( $query ) );
 				}
 
 				/** fix options table values */
 				$optionTable = $wpdb->get_blog_prefix( $site->blog_id ) . "options";
 
 				foreach ( $options_list as $option_name ) {
-					$option_value = $wpdb->get_row( "SELECT * FROM $optionTable WHERE option_name='$option_name'" );
+					$option_value = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $optionTable WHERE option_name='$option_name'" ) );
 					if ( $option_value ) {
 						$new_value = str_replace( $old_path, $full_path, $option_value->option_value );
 						update_blog_option( $site->blog_id, $option_name, $new_value );
@@ -345,14 +367,14 @@ if ( !function_exists( 'wpmn_delete_network' ) ) {
 
 		/* ensure we got a valid network id */
 		$query = "SELECT * FROM {$wpdb->site} WHERE id=" . (int)$id;
-		$network = $wpdb->get_row( $query );
+		$network = $wpdb->get_row( $wpdb->prepare( $query ) );
 
 		if ( !$network )
 			return new WP_Error( 'network_not_exist', __( 'Network does not exist.' ) );
 
 		/* ensure there are no blogs attached to this network */
 		$query = "SELECT * FROM {$wpdb->blogs} WHERE site_id=" . (int)$id;
-		$sites = $wpdb->get_results($query);
+		$sites = $wpdb->get_results( $wpdb->prepare( $query ) );
 
 		if ( $sites && !$override )
 			return new WP_Error( 'network_not_empty', __( 'Cannot delete network with sites.' ) );
@@ -367,10 +389,10 @@ if ( !function_exists( 'wpmn_delete_network' ) ) {
 		}
 
 		$query = "DELETE FROM {$wpdb->site} WHERE id=" . (int)$id;
-		$wpdb->query($query);
+		$wpdb->query( $wpdb->prepare( $query ) );
 
 		$query = "DELETE FROM {$wpdb->sitemeta} WHERE site_id=" . (int)$id;
-		$wpdb->query($query);
+		$wpdb->query( $wpdb->prepare( $query ) );
 
 		do_action( 'wpmn_delete_network' , $network );
 	}
@@ -387,7 +409,7 @@ if ( !function_exists( 'wpmn_move_site' ) ) {
 
 		/* sanity checks */
 		$query = "SELECT * FROM {$wpdb->blogs} WHERE blog_id=" . (int)$site_id;
-		$site = $wpdb->get_row( $query );
+		$site = $wpdb->get_row( $wpdb->prepare( $query ) );
 
 		if ( !$site )
 			return new WP_Error( 'blog not exist', __( 'Site does not exist.' ) );
@@ -403,7 +425,7 @@ if ( !function_exists( 'wpmn_move_site' ) ) {
 			$old_network->id = 0;
 		} else {
 			$query = "SELECT * FROM {$wpdb->site} WHERE id=" . (int)$site->site_id;
-			$old_network = $wpdb->get_row( $query );
+			$old_network = $wpdb->get_row( $wpdb->prepare( $query ) );
 			if ( !$old_network )
 				return new WP_Error( 'network_not_exist', __( 'Network does not exist.' ) );
 		}
@@ -414,7 +436,7 @@ if ( !function_exists( 'wpmn_move_site' ) ) {
 			$new_network->id = 0;
 		} else {
 			$query = "SELECT * FROM {$wpdb->site} WHERE id=" . (int)$new_network_id;
-			$new_network = $wpdb->get_row( $query );
+			$new_network = $wpdb->get_row( $wpdb->prepare( $query ) );
 
 			if ( !$new_network )
 				return new WP_Error( 'network_not_exist', __( 'Network does not exist.' ) );
@@ -456,7 +478,7 @@ if ( !function_exists( 'wpmn_move_site' ) ) {
 		$new_domain = $new_network->domain . $new_network->path;
 
 		foreach($options_list as $option_name) {
-			$option = $wpdb->get_row( "SELECT * FROM $options_table WHERE option_name='" . $option_name . "'" );
+			$option = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $options_table WHERE option_name='" . $option_name . "'" ) );
 			$new_value = str_replace( $old_domain, $new_domain, $option->option_value );
 			update_blog_option( $site->blog_id, $option_name, $new_value );
 		}
@@ -470,21 +492,39 @@ if ( !class_exists( 'MS_Networks' ) ) :
 
 		function MS_Networks()	{
 			if ( function_exists( 'add_action' ) ) {
-				add_action( 'admin_menu', array( &$this, 'admin_menu' ) );
+				add_action( 'init', array( &$this, 'wpmn_admin_url' ) );
+				add_action( 'admin_menu', array( &$this, 'wpmn_admin_menu' ) );
+				add_action( 'network_admin_menu', array( &$this, 'wpmn_network_admin_menu' ) );
 				add_action( 'wpmublogsaction', array( &$this, 'assign_blogs_link' ) );
 			}
 		}
 
-		function assign_blogs_link() {
-			global $blog;
-			echo '<a href="ms-admin.php?page=networks&amp;action=move&amp;blog_id=' . $blog['blog_id'] . '" class="edit">' . __( 'Move' ) . '</a>';
+		function wpmn_admin_url() {
+			global $wp_version;
+			if ( version_compare( $wp_version, '3.0.9', '<=' ) ) {
+				$result = esc_url(network_admin_url('options-general.php?page=networks'));
+			} else {
+				$result = esc_url(network_admin_url('settings.php?page=networks'));
+			}
+			return $result;
 		}
 
-		function admin_menu() {
-			add_submenu_page( 'ms-admin.php', __( 'Networks' ), __( 'Networks' ), 'manage_options', 'networks', array( &$this, 'networks_page' ) );
+		function assign_blogs_link($cur_blog_id) {
+			echo '<a href="' . $this->wpmn_admin_url() . '&amp;action=move&amp;blog_id=' . (int) $cur_blog_id . '" class="edit">' . __( 'Move' ) . '</a>';
 		}
 
-	/* Config Page*/
+		function wpmn_admin_menu() {
+			global $wp_version;
+			if ( version_compare( $wp_version, '3.0.9', '<=' ) ) {
+				add_options_page(__( 'Networks' ), __( 'Networks' ), 'manage_options', 'networks', array( &$this, 'networks_page' ));
+			}
+		}
+		
+		function wpmn_network_admin_menu() {
+			add_submenu_page('settings.php', __( 'Networks' ), __( 'Networks' ), 'manage_options', 'networks', array( &$this, 'networks_page' ));
+		}
+
+		/* Config Page*/
 		function networks_page() {
 			global $wpdb,  $options_to_copy;
 
@@ -510,22 +550,22 @@ if ( !class_exists( 'MS_Networks' ) ) :
 				$this->wpmn_reassign_site_page();
 
 			if ( isset( $_GET['updated'] ) ) :
-?>
-			<div id="message" class="updated fade"><p><?php _e('Options saved.') ?></p></div>
-<?php
-		elseif ( isset($_GET['added'] ) ) :
-?>
-			<div id="message" class="updated fade"><p><?php _e('Network created.'); ?></p></div>
-<?php
-		elseif( isset( $_GET['deleted'] ) ) :
-?>
-			<div id="message" class="updated fade"><p><?php _e('Network(s) deleted.'); ?></p></div>
-<?php
+				?><div id="message" class="updated fade"><p><?php _e('Options saved.') ?></p></div><?php
+			elseif ( isset($_GET['added'] ) ) :
+				?><div id="message" class="updated fade"><p><?php _e('Network created.'); ?></p></div><?php
+			elseif( isset( $_GET['deleted'] ) ) :
+				?><div id="message" class="updated fade"><p><?php _e('Network(s) deleted.'); ?></p></div><?php
 			endif;
 
 			print '<div class="wrap" style="position: relative">';
 
-			switch( $_GET[ 'action' ] ) {
+			if ( isset( $_GET[ 'action' ] )) {
+				$action = $_GET[ 'action' ];
+			} else {
+				$action = '';
+			}
+
+			switch( $action ) {
 				case 'move':
 					$this->wpmn_move_site_page();
 					break;
@@ -542,7 +582,6 @@ if ( !class_exists( 'MS_Networks' ) ) :
 					$this->wpmn_delete_multiple_network_page();
 					break;
 				default:
-
 					/* Strip off the action tag */
 					$query_str = substr( $_SERVER['REQUEST_URI'], 0, ( strpos( $_SERVER['REQUEST_URI'], '?' ) + 1 ) );
 					$get_params = array();
@@ -560,7 +599,7 @@ if ( !class_exists( 'MS_Networks' ) ) :
 							$search_conditions = 'WHERE ' . $wpdb->site . '.domain LIKE ' . "'%" . $wpdb->escape( $_GET['s'] ) . "%'";
 					}
 
-					$count = $wpdb->get_col( 'SELECT COUNT(id) FROM ' . $wpdb->site . $search_conditions );
+					$count = $wpdb->get_col( $wpdb->prepare( 'SELECT COUNT(id) FROM ' . $wpdb->site . $search_conditions ) );
 					$total = $count[0];
 
 					if ( isset( $_GET[ 'start' ] ) == false )
@@ -576,16 +615,15 @@ if ( !class_exists( 'MS_Networks' ) ) :
 					$query = "SELECT {$wpdb->site}.*, COUNT({$wpdb->blogs}.blog_id) as blogs, {$wpdb->blogs}.path as blog_path
 						FROM {$wpdb->site} LEFT JOIN {$wpdb->blogs} ON {$wpdb->blogs}.site_id = {$wpdb->site}.id $search_conditions GROUP BY {$wpdb->site}.id" ;
 
-					if( isset( $_GET[ 'sortby' ] ) == false )
-						$_GET[ 'sortby' ] = 'ID';
+					if ( isset( $_GET[ 'sortby' ] )) {
+						$sortby = $_GET[ 'sortby' ];
+					} else {
+						$sortby = 'ID';
+					}
 
-
-					switch( $_GET['sortby'] ) {
+					switch ( $sortby ) {
 						case 'Domain':
 							$query .= ' ORDER BY ' . $wpdb->site . '.domain ';
-							break;
-						case 'ID':
-							$query .= ' ORDER BY ' . $wpdb->site . '.id ';
 							break;
 						case 'Path':
 							$query .= ' ORDER BY ' . $wpdb->site . '.path ';
@@ -593,16 +631,19 @@ if ( !class_exists( 'MS_Networks' ) ) :
 						case 'Blogs':
 							$query .= ' ORDER BY blogs ';
 							break;
+						case 'ID':
+						default:
+							$query .= ' ORDER BY ' . $wpdb->site . '.id ';
 					}
 
-					if( $_GET[ 'order' ] == 'DESC' )
+					if ( isset( $_GET[ 'order' ] ) && ( $_GET[ 'order' ] == 'DESC' ))
 						$query .= 'DESC';
 					else
 						$query .= 'ASC';
 
 					$query .= ' LIMIT ' . (((int)$start - 1 ) * $num ) . ', ' . intval( $num );
 
-					$site_list = $wpdb->get_results( $query, ARRAY_A );
+					$site_list = $wpdb->get_results( $wpdb->prepare( $query ), ARRAY_A );
 
 					if ( count( $site_list ) < $num )
 						$next = false;
@@ -625,151 +666,152 @@ if ( !class_exists( 'MS_Networks' ) ) :
 						'format' => '',
 						'total' => ceil($total / $num),
 						'current' => $start
-					));
-?>
-
-	<div id="icon-tools" class="icon32"></div>
-	<h2><?php _e ( 'Networks' ) ?></h2>
-	<div id="col-container">
-		<div id="col-right">
+					));?>
+<div id="icon-tools" class="icon32"></div>
+<h2><?php _e ( 'Networks' ) ?></h2>
+<div id="col-container">
+	<div id="col-right">
+		<div class="tablenav"> 
+					<?php 
+					if ( isset( $_GET['s'] ) ) : ?>
+			<div class="alignleft">
+				<?php _e( 'Filter' ); ?>: <?php echo $wpdb->escape( $_GET['s'] ) ?> <a href="<?php echo $this->wpmn_admin_url();?>" class="button" title="<?php _e( 'Remove this filter' ) ?>"><?php _e( 'Remove' ) ?></a>
+			</div>
+					<?php 
+					endif; ?>
+			<div class="alignright">
+				<form name="searchform" action="<?php echo $_SERVER['REQUEST_URI']; ?>" method="get">
+					<input type="text" name="s" />
+					<input type="hidden" name="page" value="networks" />
+					<input type="submit" name="search" id="search" class="button" value="<?php _e('Search Domains'); ?>" />
+				</form>
+			</div>
+		</div>
+		<form name='formlist' action='<?php echo $_SERVER['REQUEST_URI'] . "&amp;action=delete_multinetworks"; ?>' method='POST'>
 			<div class="tablenav">
-<?php if ( isset( $_GET['s'] ) ) : ?>
+					<?php
+					if ( $network_navigation ) echo "<div class='tablenav-pages'>$network_navigation</div>"; ?>
 				<div class="alignleft">
-					<?php _e( 'Filter' ); ?>: <?php echo $wpdb->escape( $_GET['s'] ) ?> <a href="./ms-admin.php?page=networks" class="button" title="<?php _e( 'Remove this filter' ) ?>"><?php _e( 'Remove' ) ?></a>
-				</div>
-<?php endif; ?>
-				<div class="alignright">
-					<form name="searchform" action="<?php echo $_SERVER['REQUEST_URI']; ?>" method="get">
-						<input type="text" name="s" />
-						<input type="hidden" name="page" value="networks" />
-						<input type="submit" name="search" id="search" class="button" value="<?php _e('Search Domains'); ?>" />
-					</form>
+					<input type="submit" class="button-secondary delete" name="allnetwork_delete" value="<?php _e('Delete'); ?>" />
 				</div>
 			</div>
-			<form name='formlist' action='<?php echo $_SERVER['REQUEST_URI'] . "&amp;action=delete_multinetworks"; ?>' method='POST'>
-				<div class="tablenav">
-<?php if ( $network_navigation ) echo "<div class='tablenav-pages'>$network_navigation</div>"; ?>
-					<div class="alignleft">
-						<input type="submit" class="button-secondary delete" name="allnetwork_delete" value="<?php _e('Delete'); ?>" />
-					</div>
-				</div>
-				<br class="clear" />
-				<table width="100%" cellpadding="3" cellspacing="3" class="widefat">
-					<thead>
-						<tr>
-<?php foreach( $sites_columns as $col_name => $column_display_name ) { ?>
-<?php if ( $col_name == 'check' ) : ?>
+			<br class="clear" />
+			<table width="100%" cellpadding="3" cellspacing="3" class="widefat">
+				<thead>
+					<tr>
+					<?php 
+					foreach( $sites_columns as $col_name => $column_display_name ) { 
+						if ( $col_name == 'check' ) : ?>
+						<th scope="col" class="column-cb check-column">
+							<input type="checkbox" id="select_all">
+						<?php 
+						else :?>
+						<th scope="col"><a href="<?php echo $this->wpmn_admin_url();?>&sortby=<?php echo urlencode( $column_display_name ) ?>&<?php if( $_GET[ 'sortby' ] == $column_display_name ) { if( $_GET[ 'order' ] == 'DESC' ) { echo "order=ASC&" ; } else { echo "order=DESC&"; } } ?>start=<?php echo $start ?>"><?php echo $column_display_name; ?></a>
+						<?php 
+						endif; ?>
+						</th>
+					<?php 
+					} ?>
+					</tr>
+				</thead>
+				<tfoot>
+					<tr>
+					<?php
+					foreach( $sites_columns as $col_name => $column_display_name ) { 
+						if ( $col_name == 'check' ) : ?>
 							<th scope="col" class="column-cb check-column">
 								<input type="checkbox" id="select_all">
-<?php else :?>
-							<th scope="col"><a href="ms-admin.php?page=networks&sortby=<?php echo urlencode( $column_display_name ) ?>&<?php if( $_GET[ 'sortby' ] == $column_display_name ) { if( $_GET[ 'order' ] == 'DESC' ) { echo "order=ASC&" ; } else { echo "order=DESC&"; } } ?>start=<?php echo $start ?>"><?php echo $column_display_name; ?></a>
-<?php endif; ?>
+						<?php 
+						else :?>
+							<th scope="col"><a href="<?php echo $this->wpmn_admin_url();?>&sortby=<?php echo urlencode( $column_display_name ) ?>&<?php if( isset($_GET[ 'sortby' ]) && $_GET[ 'sortby' ] == $column_display_name ) { if( $_GET[ 'order' ] == 'DESC' ) { echo "order=ASC&" ; } else { echo "order=DESC&"; } } ?>start=<?php echo $start ?>"><?php echo $column_display_name; ?></a>
+						<?php 
+						endif; ?>
 							</th>
-<?php } ?>
-						</tr>
-					</thead>
-					<tfoot>
-						<tr>
-<?php foreach( $sites_columns as $col_name => $column_display_name ) { ?>
-
-<?php if ( $col_name == 'check' ) : ?>
-							<th scope="col" class="column-cb check-column">
-								<input type="checkbox" id="select_all">
-<?php else :?>
-							<th scope="col"><a href="ms-admin.php?page=networks&sortby=<?php echo urlencode( $column_display_name ) ?>&<?php if( $_GET[ 'sortby' ] == $column_display_name ) { if( $_GET[ 'order' ] == 'DESC' ) { echo "order=ASC&" ; } else { echo "order=DESC&"; } } ?>start=<?php echo $start ?>"><?php echo $column_display_name; ?></a>
-<?php endif; ?>
-							</th>
-<?php } ?>
+						<?php 
+						} ?>
 						</tr>
 					</tfoot>
 					<tbody>
-<?php
-
-if ( $site_list ) {
-	$bgcolor = '';
-	foreach ( $site_list as $site ) {
-?>
+				<?php	
+				if ( $site_list ) {
+					$bgcolor = '';
+					foreach ( $site_list as $site ) {?>
 						<tr>
-<?php
-		if ( constant( "VHOST" ) == 'yes' )
-			$sitename = str_replace( '.' . $current_site->domain, '', $site[ 'domain' ] );
-		else
-			$sitename = $site[ 'path' ];
+						<?php
+						if ( constant( "VHOST" ) == 'yes' )
+							$sitename = str_replace( '.' . $current_site->domain, '', $site[ 'domain' ] );
+						else
+							$sitename = $site[ 'path' ];
+						
+						$cur_site_id = (int) $site[ 'id' ];
+						$cur_site_url = esc_url('http://' . $site['domain'] . $site['path']);
 
-		foreach( $sites_columns as $column_name => $column_display_name ) {
-			switch( $column_name ) {
-				case 'check' :
-					if ( $site['blogs'] == 0 || $site['id'] != 1 ) :
-?>
-							<th scope="row" class="check-column" style="width: auto"><input type='checkbox' id='<?php echo $site[ 'id' ] ?>' name='allnetworks[]' value='<?php echo $site[ 'id' ] ?>'><label for='<?php echo $site[ 'id' ] ?>'></label</th>
-<?php
-					else :
-?>
+						foreach( $sites_columns as $column_name => $column_display_name ) {
+							switch( $column_name ) {
+								case 'check' :
+									if ( $site['blogs'] == 0 || $site['id'] != 1 ) :?>
+							<th scope="row" class="check-column" style="width: auto"><input type='checkbox' id='<?php echo $site[ 'id' ] ?>' name='allnetworks[]' value='<?php echo $site[ 'id' ] ?>'><label for='<?php echo $cur_site_id ?>'></label</th>
+									<?php
+									else :?>
 							<th></th>
-<?php
-					endif;
-					break;
+									<?php
+									endif;
+									break;
+								case 'id':?>
+							<td><?php echo $cur_site_id ?></td>
+									<?php
+									break;
+								case 'domain':?>
+							<td>
+									<?php 
+									echo $site['domain'];
+									$actions	= array();
+									$actions[]	= '<a class="edit" href="' . $cur_site_url . 'wp-admin/" title="' . __('Site Admin') . '">' . __( 'Site Admin' ) . '</a>';
+									$actions[]	= '<a class="edit" href="' . $cur_site_url . 'wp-admin/network/" title="' . __('Network Admin') . '">' . __( 'Network Admin' ) . '</a>';
+									$actions[]	= '<a class="edit" href="' . $query_str . "&amp;action=assignblogs&amp;id=" . $site['id'] . '" title="' . __('Assign sites to this network') . '">' . __( 'Assign Sites' ) . '</a>';
+									$actions[]	= '<a class="edit" href="' . $query_str . "&amp;action=editnetwork&amp;id=" .  $site['id'] . '" title="' . __('Edit this network') . '">' . __('Edit') . '</a>';
+									if ( $site['blogs'] == 0 || $site['id'] != 1 )
+										$actions[] = '<a class="delete" href="' . $query_str . "&amp;action=deletenetwork&amp;id=" . $site['id'] . '" title="' . __('Delete this network') . '">' . __('Delete') . '</a>';
 
-				case 'id':
-?>
-							<td><?php echo $site[ 'id' ] ?></td>
-<?php
-					break;
-
-				case 'domain':
-?>
-							<td><?php echo $site['domain'] ?>
-<?php
-					$actions	= array();
-					$actions[]	= '<a class="edit" href="' . $query_str . "&amp;action=assignblogs&amp;id=" . $site['id'] . '" title="' . __('Assign sites to this network') . '">' . __( 'Assign Sites' ) . '</a>';
-					$actions[]	= '<a class="edit" href="' . $query_str . "&amp;action=editnetwork&amp;id=" .  $site['id'] . '" title="' . __('Edit this network') . '">' . __('Edit') . '</a>';
-					if ( $site['blogs'] == 0 || $site['id'] != 1 )
-						$actions[] = '<a class="delete" href="' . $query_str . "&amp;action=deletenetwork&amp;id=" . $site['id'] . '" title="' . __('Delete this network') . '">' . __('Delete') . '</a>';
-
-					if ( count( $actions ) ) : ?>
+									if ( count( $actions ) ) : ?>
 								<div class="row-actions">
 									<?php echo implode(' | ', $actions); ?>
 								</div>
-<?php endif; ?>
+									<?php
+									endif; ?>
 							</td>
-<?php
-					break;
+									<?php
+									break;
 
-				case 'path':
-?>
-							<td valign='top'><label for='<?php echo $site[ 'id' ] ?>'><?php echo $site['path'] ?></label></td>
-<?php
-					break;
-
-				case 'blogs':
-?>
+								case 'path':?>
+							<td valign='top'><label for='<?php echo $cur_site_id ?>'><?php echo $site['path'] ?></label></td>
+									<?php
+									break;
+								case 'blogs':?>
 							<td valign='top'><a href="http://<?php echo $site['domain'] . $site['blog_path'];?>wp-admin/ms-sites.php" title="<?php _e('Sites on this network'); ?>"><?php echo $site['blogs'] ?></a></td>
-<?php
-					break;
+									<?php
+									break;
 
-				default:
-?>
+								default:?>
 							<td valign='top'><?php do_action( 'manage_networks_custom_column', $column_name, $site['id'] ); ?></td>
-<?php
-					break;
-			}
-		}
-?>
+									<?php
+									break;
+							}
+						}?>
 						</tr>
-<?php
-	}
-} else {
-?>
+					<?php
+					}
+				} else { ?>
 						<tr style=''>
 							<td colspan="8"><?php _e( 'No networks found.' ) ?></td>
 						</tr>
-<?php
-} // end if ($sites)
-?>
+				<?php
+				} // end if ($sites)?>
 					</tbody>
 				</table>
 				<div class="tablenav">
-<?php if ( $network_navigation ) echo "<div class='tablenav-pages'>$network_navigation</div>"; ?>
+				<?php 	
+				if ( $network_navigation ) echo "<div class='tablenav-pages'>$network_navigation</div>"; ?>
 					<div class="alignleft">
 						<input type="submit" class="button-secondary delete" name="allnetwork_delete" value="<?php _e('Delete'); ?>" />
 					</div>
@@ -794,18 +836,25 @@ if ( $site_list ) {
 								<table class="form-table">
 								<tr>
 									<th scope="row"><label for="cloneNetwork"><?php _e('Clone Network'); ?>:</label></th>
-									<?php	$network_list = $wpdb->get_results( 'SELECT id, domain FROM ' . $wpdb->site , ARRAY_A );	?>
-									<td colspan="2"><select name="cloneNetwork" id="cloneNetwork"><option value="0"><?php _e('Do Not Clone'); ?></option><?php foreach($network_list as $network) { echo '<option value="' . $network['id'] . '"' . ($network['id'] == 1 ? ' selected' : '' ) . '>' . $network['domain'] . '</option>'; } ?></select></td>
+									<?php $network_list = $wpdb->get_results( $wpdb->prepare( 'SELECT id, domain FROM ' . $wpdb->site ), ARRAY_A );	?>
+									<td colspan="2">
+										<select name="cloneNetwork" id="cloneNetwork">
+											<option value="0"><?php _e('Do Not Clone'); ?></option>
+				<?php 
+				foreach($network_list as $network) { 
+					echo '											' . 
+						 '<option value="' . $network['id'] . '"' . ($network['id'] == 1 ? ' selected' : '' ) . '>' . $network['domain'] . '</option>'; 
+				}?>
+										</select></td>
 								</tr>
 								<tr>
-<?php
-	$all_network_options = $wpdb->get_results( 'SELECT DISTINCT meta_key FROM ' . $wpdb->sitemeta );
+				<?php
+				$all_network_options = $wpdb->get_results( $wpdb->prepare( 'SELECT DISTINCT meta_key FROM ' . $wpdb->sitemeta ) );
 
-	$known_networkmeta_options = $options_to_copy;
-	$known_networkmeta_options = apply_filters( 'manage_networkmeta_descriptions' , $known_networkmeta_options );
+				$known_networkmeta_options = $options_to_copy;
+				$known_networkmeta_options = apply_filters( 'manage_networkmeta_descriptions' , $known_networkmeta_options );
 
-	$options_to_copy = apply_filters( 'manage_network_clone_options' , $options_to_copy );
-?>
+				$options_to_copy = apply_filters( 'manage_network_clone_options' , $options_to_copy );?>
 									<td colspan="3">
 										<table class="widefat">
 											<thead>
@@ -843,48 +892,44 @@ jQuery('.postbox').children('h3').click(function() {
 	}
 });
 </script>
-<?php
-
-			break;
-		} // end switch( $action )
-?>
+					<?php
+					break;
+			} // end switch( $action ) ?>
 </div>
-<?php
+		<?php
+		} // function networks_page
 
-	}
+		function wpmn_move_site_page() {
+			global $wpdb;
 
-	function wpmn_move_site_page() {
-		global $wpdb;
+			if ( isset( $_POST['move'] ) && isset( $_GET['blog_id'] ) ) {
+				if ( isset( $_POST['from'] ) && isset( $_POST['to'] ) ) {
+					wpmn_move_site( $_GET['blog_id'], $_POST['to'] );
+					$_GET['updated'] = 'yes';
+					$_GET['action'] = 'saved';
+				}
+			} else {
+				if( !isset( $_GET['blog_id'] ) )
+					die( __( 'You must select a blog to move.' ) );
 
-		if ( isset( $_POST['move'] ) && isset( $_GET['blog_id'] ) ) {
-			if ( isset( $_POST['from'] ) && isset( $_POST['to'] ) ) {
-				wpmn_move_site( $_GET['blog_id'], $_POST['to'] );
-				$_GET['updated'] = 'yes';
-				$_GET['action'] = 'saved';
-			}
-		} else {
-			if( !isset( $_GET['blog_id'] ) )
-				die( __( 'You must select a blog to move.' ) );
+				$query = "SELECT * FROM {$wpdb->blogs} WHERE blog_id=" . (int)$_GET['blog_id'];
+				$site = $wpdb->get_row( $wpdb->prepare( $query ) );
 
-			$query = "SELECT * FROM {$wpdb->blogs} WHERE blog_id=" . (int)$_GET['blog_id'];
-			$site = $wpdb->get_row( $query );
+				if ( !$site )
+					die( __( 'Invalid blog id.' ) );
 
-			if ( !$site )
-				die( __( 'Invalid blog id.' ) );
+				$table_name = $wpdb->get_blog_prefix( $site->blog_id ) . "options";
+				$details = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table_name} WHERE option_name='blogname'" ) );
 
-			$table_name = $wpdb->get_blog_prefix( $site->blog_id ) . "options";
-			$details = $wpdb->get_row( "SELECT * FROM {$table_name} WHERE option_name='blogname'" );
+				if ( !$details )
+					die( __( 'Invalid blog id.' ) );
 
-			if ( !$details )
-				die( __( 'Invalid blog id.' ) );
+				$sites = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$wpdb->site}" ) );
 
-			$sites = $wpdb->get_results( "SELECT * FROM {$wpdb->site}" );
-
-			foreach ( $sites as $key => $network ) {
-				if ( $network->id == $site->site_id )
-					$myNetwork = $sites[$key];
-			}
-?>
+				foreach ( $sites as $key => $network ) {
+					if ( $network->id == $site->site_id )
+						$myNetwork = $sites[$key];
+				}?>
 			<div id="icon-tools" class="icon32"></div>
 			<h2><?php _e ( 'Networks' ) ?></h2>
 			<h3><?php echo __( 'Moving' ) . ' ' . stripslashes( $details->option_value ); ?></h3>
@@ -901,21 +946,20 @@ jQuery('.postbox').children('h3').click(function() {
 						<td>
 							<select name="to" id="to">
 								<option value="0"><?php _e('Select a Network'); ?></option>
-<?php
-	foreach ( $sites as $network ) {
-		if ( $network->id != $myNetwork->id ) :
-?>
+				<?php
+				foreach ( $sites as $network ) {
+					if ( $network->id != $myNetwork->id ) :?>
 								<option value="<?php echo $network->id ?>"><?php echo $network->domain ?></option>
-<?php
-		endif;
-	}
-?>
+					<?php
+					endif;
+				} ?>
 							</select>
 						</td>
 					</tr>
 				</table>
 				<br />
-<?php if ( has_action( 'add_move_blog_option' ) ) : ?>
+				<?php 			
+				if ( has_action( 'add_move_blog_option' ) ) : ?>
 				<table class="widefat">
 					<thead>
 						<tr scope="col"><th colspan="2"><?php _e('Options'); ?>:</th></tr>
@@ -923,77 +967,77 @@ jQuery('.postbox').children('h3').click(function() {
 					<?php do_action( 'add_move_blog_option', $site->blog_id ); ?>
 				</table>
 				<br />
-<?php endif; ?>
+				<?php
+				endif; ?>
 				<div>
 					<input type="hidden" name="from" value="<?php echo $site->site_id; ?>" />
 					<input class="button" type="submit" name="move" value="<?php _e('Move Site'); ?>" />
 					<a class="button" href="./ms-sites.php"><?php _e('Cancel'); ?></a>
 				</div>
 			</form>
-<?php
-		}
-	}
-
-	function wpmn_reassign_site_page() {
-		global $wpdb;
-
-		if ( isset( $_POST['reassign'] ) && isset( $_GET['id'] ) ) {
-			/** Javascript enabled for client - check the 'to' box */
-			if ( isset( $_POST['jsEnabled'] ) ) {
-				if ( !isset( $_POST['to'] ) )
-					die( __( 'No blogs selected.' ) );
-
-				$sites = $_POST['to'];
-
-			/** Javascript disabled for client - check the 'from' box */
-			} else {
-				if ( !isset( $_POST['from'] ) )
-					die( __( 'No blogs seleceted.' ) );
-
-				$sites = $_POST['from'];
+			<?php
 			}
+		} // wpmn_move_site_page
 
-			$current_blogs = $wpdb->get_results( "SELECT * FROM {$wpdb->blogs} WHERE site_id=" . (int)$_GET['id'] );
+		function wpmn_reassign_site_page() {
+			global $wpdb;
 
-			foreach( $sites as $site ) {
-				wpmn_move_site( $site, (int)$_GET['id'] );
-			}
+			if ( isset( $_POST['reassign'] ) && isset( $_GET['id'] ) ) {
+				/** Javascript enabled for client - check the 'to' box */
+				if ( isset( $_POST['jsEnabled'] ) ) {
+					if ( !isset( $_POST['to'] ) )
+						die( __( 'No blogs selected.' ) );
 
-			/* true sync - move any unlisted blogs to 'zero' network */
-			if ( ENABLE_NETWORK_ZERO ) {
-				foreach( $current_blogs as $current_blog ) {
-					if ( !in_array( $current_blog->blog_id, $sites ) )
-						wpmn_move_site( $current_blog->blog_id, 0 );
+					$sites = $_POST['to'];
 
+				/** Javascript disabled for client - check the 'from' box */
+				} else {
+					if ( !isset( $_POST['from'] ) )
+						die( __( 'No blogs seleceted.' ) );
+
+					$sites = $_POST['from'];
 				}
-			}
 
-			$_GET['updated'] = 'yes';
-			$_GET['action'] = 'saved';
+				$current_blogs = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$wpdb->blogs} WHERE site_id=" . (int)$_GET['id'] ) );
 
-		} else {
+				foreach( $sites as $site ) {
+					wpmn_move_site( $site, (int)$_GET['id'] );
+				}
 
-			// get network by id
-			$query = "SELECT * FROM {$wpdb->site} WHERE id=" . (int)$_GET['id'];
-			$network = $wpdb->get_row( $query );
+				/* true sync - move any unlisted blogs to 'zero' network */
+				if ( ENABLE_NETWORK_ZERO ) {
+					foreach( $current_blogs as $current_blog ) {
+						if ( !in_array( $current_blog->blog_id, $sites ) )
+							wpmn_move_site( $current_blog->blog_id, 0 );
 
-			if ( !$network )
-				die( __( 'Invalid network id.' ) );
+					}
+				}
 
-			$sites = $wpdb->get_results( "SELECT * FROM {$wpdb->blogs}" );
-			if ( !$sites )
-				die( __( 'Site table inaccessible.' ) );
+				$_GET['updated'] = 'yes';
+				$_GET['action'] = 'saved';
 
-			foreach( $sites as $key => $site ) {
-				$table_name = $wpdb->get_blog_prefix( $site->blog_id ) . "options";
-				$site_name = $wpdb->get_row("SELECT * FROM $table_name WHERE option_name='blogname'");
+			} else {
 
-				if ( !$site_name )
-					die( __( 'Invalid blog.' ) );
+				// get network by id
+				$query = "SELECT * FROM {$wpdb->site} WHERE id=" . (int)$_GET['id'];
+				$network = $wpdb->get_row( $wpdb->prepare( $query ) );
 
-				$sites[$key]->name = stripslashes( $site_name->option_value );
-			}
-?>
+				if ( !$network )
+					die( __( 'Invalid network id.' ) );
+
+				$sites = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$wpdb->blogs}" ) );
+				if ( !$sites )
+					die( __( 'Site table inaccessible.' ) );
+
+				foreach( $sites as $key => $site ) {
+					$table_name = $wpdb->get_blog_prefix( $site->blog_id ) . "options";
+					$site_name = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table_name WHERE option_name='blogname'" ) );
+
+					if ( !$site_name )
+						die( __( 'Invalid blog.' ) );
+
+					$sites[$key]->name = stripslashes( $site_name->option_value );
+				} ?>
 			<div id="icon-tools" class="icon32"></div>
 			<h2><?php _e ( 'Networks' ) ?></h2>
 			<h3><?php _e( 'Assign Sites to' ); ?>: http://<?php echo $network->domain . $network->path ?></h3>
@@ -1012,11 +1056,10 @@ jQuery('.postbox').children('h3').click(function() {
 					<tr>
 						<td>
 							<select name="from[]" id="from" multiple style="height: auto; width: 98%">
-<?php
-	foreach ( $sites as $site ) {
-		if ( $site->site_id != $network->id ) echo '<option value="' . $site->blog_id . '">' . $site->name  . ' (' . $site->domain . ')</option>';
-	}
-?>
+				<?php
+				foreach ( $sites as $site ) {
+					if ( $site->site_id != $network->id ) echo '<option value="' . $site->blog_id . '">' . $site->name  . ' (' . $site->domain . ')</option>';
+				} ?>
 							</select>
 						</td>
 						<td>
@@ -1043,17 +1086,20 @@ jQuery('.postbox').children('h3').click(function() {
 					</tr>
 				</table>
 				<br class="clear" />
-<?php if ( has_action( 'add_move_blog_option' ) ) : ?>
+				<?php
+				if ( has_action( 'add_move_blog_option' ) ) : ?>
 				<table class="widefat">
 					<thead>
 						<tr scope="col"><th colspan="2"><?php _e( 'Options' ); ?>:</th></tr>
 					</thead>
-<?php do_action( 'add_move_blog_option', $site->blog_id ); ?>
+					<?php
+					do_action( 'add_move_blog_option', $site->blog_id ); ?>
 				</table>
 				<br />
-<?php endif; ?>
+				<?php
+				endif; ?>
 				<input type="submit" name="reassign" value="<?php _e( 'Update Assigments' ); ?>" class="button" />
-				<a href="./ms-admin.php?page=networks"><?php _e( 'Cancel' ); ?></a>
+				<a href="<?php echo $this->wpmn_admin_url();?>"><?php _e( 'Cancel' ); ?></a>
 			</form>
 			<script type="text/javascript">
 				if(document.getElementById) {
@@ -1125,74 +1171,77 @@ jQuery('.postbox').children('h3').click(function() {
 			</script>
 			<?php
 
-		}
-	}
+			}
+		} // wpmn_reassign_site_page
 
-	function wpmn_add_network_page() {
-		global $wpdb, $options_to_copy;
+		function wpmn_add_network_page() {
+			global $wpdb, $options_to_copy;
 
-		if ( isset( $_POST['add'] ) && isset( $_POST['domain'] ) && isset( $_POST['path'] ) ) {
+			if ( isset( $_POST['add'] ) && isset( $_POST['domain'] ) && isset( $_POST['path'] ) ) {
 
-			/** grab custom options to clone if set */
-			if ( isset( $_POST['options_to_clone'] ) && is_array( $_POST['options_to_clone'] ) )
-				$options_to_clone = array_keys( $_POST['options_to_clone'] );
-			else
-				$options_to_clone = $options_to_copy;
+				/** grab custom options to clone if set */
+				if ( isset( $_POST['options_to_clone'] ) && is_array( $_POST['options_to_clone'] ) )
+					$options_to_clone = array_keys( $_POST['options_to_clone'] );
+				else
+					$options_to_clone = $options_to_copy;
 
-			$result = wpmn_add_network(
-				$_POST['domain'],
-				$_POST['path'],
-				( isset( $_POST['newSite'] ) ? $_POST['newSite'] : __('New Network Created') ) ,
-				( isset( $_POST['cloneNetwork'] ) ? $_POST['cloneNetwork'] : NULL ),
-				$options_to_clone
-			);
+				$result = wpmn_add_network(
+					$_POST['domain'],
+					$_POST['path'],
+					( isset( $_POST['newSite'] ) ? $_POST['newSite'] : __('New Network Created') ) ,
+					( isset( $_POST['cloneNetwork'] ) ? $_POST['cloneNetwork'] : NULL ),
+					$options_to_clone
+				);
 
-			if ( $result ) {
-				if ( isset( $_POST['name'] ) ) {
-					wpmn_switch_to_network( $result );
-					add_site_option( 'site_name', $_POST['name'] );
-					wpmn_restore_current_network();
+				if ( $result && !is_wp_error($result)) {
+					if ( isset( $_POST['name'] ) ) {
+						wpmn_switch_to_network( $result );
+						add_site_option( 'site_name', $_POST['name'] );
+						wpmn_restore_current_network();
+					}
+
+					$_GET['updated'] = 'yes';
+					$_GET['action'] = 'saved';
+				} else {
+					foreach ($result->errors as $i => $error) {
+						echo("<h2>Error: " . $error[0] . "</h2>");
+					}
 				}
+			}
+		} // wpmn_add_network_page
 
-				$_GET['updated'] = 'yes';
+		function wpmn_update_network_page() {
+			global $wpdb;
+
+			if ( isset( $_POST['update'] ) && isset( $_GET['id'] ) ) {
+				$query = "SELECT * FROM {$wpdb->site} WHERE id=" . (int)$_GET['id'];
+				$network = $wpdb->get_row( $wpdb->prepare( $query ) );
+				if ( !$network )
+					die( __( 'Invalid network id.' ) );
+
+				wpmn_update_network( (int)$_GET['id'], $_POST['domain'], $_POST['path'] );
+				$_GET['updated'] = 'true';
 				$_GET['action'] = 'saved';
-			}
-		}
-	}
 
-	function wpmn_update_network_page() {
-		global $wpdb;
+			} else {
 
-		if ( isset( $_POST['update'] ) && isset( $_GET['id'] ) ) {
-			$query = "SELECT * FROM {$wpdb->site} WHERE id=" . (int)$_GET['id'];
-			$network = $wpdb->get_row( $query );
-			if ( !$network )
-				die( __( 'Invalid network id.' ) );
+				// get network by id
+				$query = "SELECT * FROM {$wpdb->site} WHERE id=" . (int)$_GET['id'];
+				$network = $wpdb->get_row( $wpdb->prepare( $query ) );
 
-			wpmn_update_network( (int)$_GET['id'], $_POST['domain'], $_POST['path'] );
-			$_GET['updated'] = 'true';
-			$_GET['action'] = 'saved';
+				if ( !$network )
+					wp_die(__('Invalid network id.'));
 
-		} else {
+				/* strip off the action tag */
+				$query_str = substr( $_SERVER['REQUEST_URI'], 0, ( strpos( $_SERVER['REQUEST_URI'], '?' ) + 1 ) );
+				$get_params = array();
 
-			// get network by id
-			$query = "SELECT * FROM {$wpdb->site} WHERE id=" . (int)$_GET['id'];
-			$network = $wpdb->get_row( $query );
+				foreach ( $_GET as $get_param => $get_value ) {
+					if ( $get_param != 'action' )
+						$get_params[] = $get_param . '=' . $get_value;
 
-			if ( !$network )
-				wp_die(__('Invalid network id.'));
-
-			/* strip off the action tag */
-			$query_str = substr( $_SERVER['REQUEST_URI'], 0, ( strpos( $_SERVER['REQUEST_URI'], '?' ) + 1 ) );
-			$get_params = array();
-
-			foreach ( $_GET as $get_param => $get_value ) {
-				if ( $get_param != 'action' )
-					$get_params[] = $get_param . '=' . $get_value;
-
-			}
-			$query_str .= implode( '&', $get_params );
-?>
+				}
+				$query_str .= implode( '&', $get_params );?>
 			<div id="icon-tools" class="icon32"></div>
 			<h2><?php _e ('Networks') ?></h2>
 			<h3><?php _e('Edit Network'); ?>: http://<?php echo $network->domain . $network->path ?></h3>
@@ -1201,190 +1250,185 @@ jQuery('.postbox').children('h3').click(function() {
 					<tr class="form-field"><th scope="row"><label for="domain"><?php _e( 'Domain' ); ?></label></th><td> http://<input type="text" id="domain" name="domain" value="<?php echo $network->domain; ?>"></td></tr>
 					<tr class="form-field"><th scope="row"><label for="path"><?php _e( 'Path' ); ?></label></th><td><input type="text" id="path" name="path" value="<?php echo $network->path; ?>" /></td></tr>
 				</table>
-<?php if ( has_action( 'add_edit_network_option' ) ) : ?>
+				<?php
+				if ( has_action( 'add_edit_network_option' ) ) : ?>
 				<h3><?php _e( 'Options:' ) ?></h3>
 				<table class="form-table">
 					<?php do_action( 'add_edit_network_option' ); ?>
 				</table>
-<?php endif; ?>
+				<?php
+				endif; ?>
 				<p>
 					<input type="hidden" name="networkId" value="<?php echo $network->id; ?>" />
 					<input class="button" type="submit" name="update" value="<?php _e( 'Update Network' ); ?>" />
-					<a href="./ms-admin.php?page=networks"><?php _e('Cancel'); ?></a>
+					<a href="<?php echo $this->wpmn_admin_url();?>"><?php _e('Cancel'); ?></a>
 				</p>
 			</form>
-<?php
-		}
-	}
-
-	function wpmn_delete_network_page() {
-		global $wpdb;
-
-		if ( isset( $_POST['delete'] ) && isset( $_GET['id'] ) ) {
-			$result = wpmn_delete_network( (int)$_GET['id'], ( isset( $_POST['override'] ) ) );
-
-			if ( is_a( $result, 'WP_Error' ) )
-				wp_die( $result->get_error_message() );
-
-			$_GET['deleted'] = 'yes';
-			$_GET['action'] = 'saved';
-
-		} else {
-
-			/* get network by id */
-			$query = "SELECT * FROM {$wpdb->site} WHERE id=" . (int)$_GET['id'];
-			$network = $wpdb->get_row( $query );
-
-			if ( !$network )
-				die( __( 'Invalid network id.' ) );
-
-			$query = "SELECT * FROM {$wpdb->blogs} WHERE site_id=" . (int)$_GET['id'];
-			$sites = $wpdb->get_results( $query );
-
-			/* strip off the action tag */
-			$query_str = substr( $_SERVER['REQUEST_URI'], 0, ( strpos( $_SERVER['REQUEST_URI'], '?' ) + 1 ) );
-			$get_params = array();
-
-			foreach( $_GET as $get_param => $get_value ) {
-				if ( $get_param != 'action' )
-					$get_params[] = $get_param . '=' . $get_value;
+			<?php
 			}
-			$query_str .= implode( '&', $get_params );
-?>
+		} // wpmn_update_network_page
+
+		function wpmn_delete_network_page() {
+			global $wpdb;
+
+			if ( isset( $_POST['delete'] ) && isset( $_GET['id'] ) ) {
+				$result = wpmn_delete_network( (int)$_GET['id'], ( isset( $_POST['override'] ) ) );
+
+				if ( is_a( $result, 'WP_Error' ) )
+					wp_die( $result->get_error_message() );
+
+				$_GET['deleted'] = 'yes';
+				$_GET['action'] = 'saved';
+
+			} else {
+
+				/* get network by id */
+				$query = "SELECT * FROM {$wpdb->site} WHERE id=" . (int)$_GET['id'];
+				$network = $wpdb->get_row( $wpdb->prepare( $query ) );
+
+				if ( !$network )
+					die( __( 'Invalid network id.' ) );
+
+				$query = "SELECT * FROM {$wpdb->blogs} WHERE site_id=" . (int)$_GET['id'];
+				$sites = $wpdb->get_results( $wpdb->prepare( $query ) );
+
+				/* strip off the action tag */
+				$query_str = substr( $_SERVER['REQUEST_URI'], 0, ( strpos( $_SERVER['REQUEST_URI'], '?' ) + 1 ) );
+				$get_params = array();
+
+				foreach( $_GET as $get_param => $get_value ) {
+					if ( $get_param != 'action' )
+						$get_params[] = $get_param . '=' . $get_value;
+				}
+				$query_str .= implode( '&', $get_params );?>
 			<form method="POST" action="<?php echo $query_str; ?>">
 				<div>
 					<div id="icon-tools" class="icon32"></div>
 					<h2><?php _e( 'Networks' ); ?></h2>
 					<h3><?php _e( 'Delete Network' ); ?>: <?php echo $network->domain . $network->path; ?></h3>
-<?php if ( $sites ) {
-	if ( RESCUE_ORPHANED_BLOGS && ENABLE_NETWORK_ZERO ) {
- ?>
+					<?php
+				if ( $sites ) {
+					if ( RESCUE_ORPHANED_BLOGS && ENABLE_NETWORK_ZERO ) {?>
 					<div id="message" class="error">
 						<p><?php _e('There are blogs associated with this network. ');  _e('Deleting it will move them to the holding network.'); ?></p>
 						<p><label for="override"><?php _e('If you still want to delete this network, check the following box'); ?>:</label> <input type="checkbox" name="override" id="override" /></p>
 					</div>
-<?php } else { ?>
+					<?php
+					} else { ?>
 					<div id="message" class="error">
 						<p><?php _e('There are blogs associated with this network. '); _e('Deleting it will delete those blogs as well.'); ?></p>
 						<p><label for="override"><?php _e('If you still want to delete this network, check the following box'); ?>:</label> <input type="checkbox" name="override" id="override" /></p>
 					</div>
-<?php } ?>
-<?php } ?>
+					<?php
+					}
+				} ?>
 					<p><?php _e('Are you sure you want to delete this network?'); ?></p>
-					<input type="submit" name="delete" value="<?php _e('Delete Network'); ?>" class="button" /> <a href="./ms-admin.php?page=networks"><?php _e('Cancel'); ?></a>
+					<input type="submit" name="delete" value="<?php _e('Delete Network'); ?>" class="button" /> <a href="<?php echo $this->wpmn_admin_url();?>"><?php _e('Cancel'); ?></a>
 				</div>
 			</form>
-<?php
-		}
-	}
+			<?php
+			}
+		} // wpmn_delete_network_page
 
-	function wpmn_delete_multiple_network_page() {
+		function wpmn_delete_multiple_network_page() {
 
-		global $wpdb;
+			global $wpdb;
 
-		if(isset($_POST['delete_multiple']) && isset($_POST['deleted_networks'])) {
-			foreach($_POST['deleted_networks'] as $deleted_network) {
-				$result = wpmn_delete_network((int)$deleted_network,(isset($_POST['override'])));
-				if(is_a($result,'WP_Error')) {
-					wp_die($result->get_error_message());
+			if(isset($_POST['delete_multiple']) && isset($_POST['deleted_networks'])) {
+				foreach($_POST['deleted_networks'] as $deleted_network) {
+					$result = wpmn_delete_network((int)$deleted_network,(isset($_POST['override'])));
+					if(is_a($result,'WP_Error')) {
+						wp_die($result->get_error_message());
+					}
 				}
-			}
-			$_GET['deleted'] = 'yes';
-			$_GET['action'] = 'saved';
-		} else {
+				$_GET['deleted'] = 'yes';
+				$_GET['action'] = 'saved';
+			} else {
 
-			/** ensure a list of networks was sent */
-			if(!isset($_POST['allnetworks'])) {
-				wp_die(__('You have not selected any networks to delete.'));
-			}
-			$allnetworks = array_map(create_function('$val','return (int)$val;'),$_POST['allnetworks']);
-
-			/** ensure each network is valid */
-			foreach($allnetworks as $network) {
-				if(!wpmn_network_exists((int)$network)) {
-					wp_die(__('You have selected an invalid network for deletion.'));
+				/** ensure a list of networks was sent */
+				if(!isset($_POST['allnetworks'])) {
+					wp_die(__('You have not selected any networks to delete.'));
 				}
-			}
-			/** remove primary network from list */
-			if(in_array(1,$allnetworks)) {
-				$sites = array();
+				$allnetworks = array_map(create_function('$val','return (int)$val;'),$_POST['allnetworks']);
+
+				/** ensure each network is valid */
 				foreach($allnetworks as $network) {
-					if($network != 1) $sites[] = $network;
+					if(!wpmn_network_exists((int)$network)) {
+						wp_die(__('You have selected an invalid network for deletion.'));
+					}
 				}
-				$allnetworks = $sites;
-			}
+				/** remove primary network from list */
+				if(in_array(1,$allnetworks)) {
+					$sites = array();
+					foreach($allnetworks as $network) {
+						if($network != 1) $sites[] = $network;
+					}
+					$allnetworks = $sites;
+				}
 
-			$query = "SELECT * FROM {$wpdb->site} WHERE id IN (" . implode(',',$allnetworks) . ')';
-			$network = $wpdb->get_results($query);
-			if(!$network) {
-				wp_die(__('You have selected an invalid network or networks for deletion'));
-			}
+				$query = "SELECT * FROM {$wpdb->site} WHERE id IN (" . implode(',',$allnetworks) . ')';
+				$network = $wpdb->get_results( $wpdb->prepare( $query ) );
+				if(!$network) {
+					wp_die(__('You have selected an invalid network or networks for deletion'));
+				}
 
-			$query = "SELECT * FROM {$wpdb->blogs} WHERE site_id IN (" . implode(',',$allnetworks) . ')';
-			$sites = $wpdb->get_results($query);
-
-?>
-			<form method="POST" action="./ms-admin.php?page=networks"><div>
+				$query = "SELECT * FROM {$wpdb->blogs} WHERE site_id IN (" . implode(',',$allnetworks) . ')';
+				$sites = $wpdb->get_results($wpdb->prepare($query));?>
+			<form method="POST" action="<?php echo $this->wpmn_admin_url();?>"><div>
 			<div id="icon-tools" class="icon32"></div>
 			<h2><?php _e('Networks') ?></h2>
 			<h3><?php _e('Delete Multiple Networks'); ?></h3>
-<?php
-
-			if ( $sites ) {
-				if ( RESCUE_ORPHANED_BLOGS && ENABLE_NETWORK_ZERO ) {
-?>
-
+				<?php
+				if ( $sites ) {
+					if ( RESCUE_ORPHANED_BLOGS && ENABLE_NETWORK_ZERO ) {?>
 			<div id="message" class="error">
 				<h3><?php _e('You have selected the following networks for deletion'); ?>:</h3>
 				<ul>
-<?php foreach( $network as $deleted_network ) { ?>
+				<?php
+				foreach( $network as $deleted_network ) { ?>
 					<li><input type="hidden" name="deleted_networks[]" value="<?php echo $deleted_network->id; ?>" /><?php echo $deleted_network->domain . $deleted_network->path ?></li>
-<?php } ?>
+				<?php
+				} ?>
 				</ul>
 				<p><?php _e('There are blogs associated with one or more of these networks.  Deleting them will move these blgos to the holding network.'); ?></p>
 				<p><label for="override"><?php _e('If you still want to delete these networks, check the following box'); ?>:</label> <input type="checkbox" name="override" id="override" /></p>
 			</div>
-
-<?php } else { ?>
-
+				<?php 
+				} else { ?>
 			<div id="message" class="error">
 				<h3><?php _e('You have selected the following networks for deletion'); ?>:</h3>
 				<ul>
-<?php foreach( $network as $deleted_network ) { ?>
+					<?php
+					foreach( $network as $deleted_network ) { ?>
 					<li><input type="hidden" name="deleted_networks[]" value="<?php echo $deleted_network->id; ?>" /><?php echo $deleted_network->domain . $deleted_network->path ?></li>
-<?php } ?>
+					<?php
+					} ?>
 				</ul>
 				<p><?php _e('There are blogs associated with one or more of these networks.  Deleting them will delete those blogs as well.'); ?></p>
 				<p><label for="override"><?php _e('If you still want to delete these networks, check the following box'); ?>:</label> <input type="checkbox" name="override" id="override" /></p>
 			</div>
-
-<?php
-				}
-			} else {
-
-?>
-
+					<?php
+					}
+				} else { ?>
 			<div id="message">
 				<h3><?php _e('You have selected the following networks for deletion'); ?>:</h3>
 				<ul>
-<?php foreach($network as $deleted_network) { ?>
+					<?php 
+					foreach($network as $deleted_network) { ?>
 					<li><input type="hidden" name="deleted_networks[]" value="<?php echo $deleted_network->id; ?>" /><?php echo $deleted_network->domain . $deleted_network->path ?></li>
-<?php } ?>
+					<?php				
+					} ?>
 				</ul>
 			</div>
-
-<?php
-			}
-?>
+				<?php
+				}?>
 				<p><?php _e('Are you sure you want to delete these networks?'); ?></p>
 				<input type="submit" name="delete_multiple" value="<?php _e('Delete Networks'); ?>" class="button" /> <input type="submit" name="cancel" value="<?php _e('Cancel'); ?>" class="button" />
 			</div></form>
-<?php
-		}
-	}
-}
-endif;
+			<?php
+			}
+		} // wpmn_delete_multiple_network_page
+	} // class MS_Networks 
+endif; // if ( !class_exists( 'MS_Networks' ) )
 
 $wp_multi_network = new MS_Networks();
-
-?>
