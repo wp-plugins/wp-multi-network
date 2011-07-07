@@ -6,7 +6,8 @@ Description: Adds a Network Management UI for super admins in a WordPress Multis
 Version: 1.2
 Author: Brian Layman
 Author URI: http://WebDevStudios.com
-Tags: multi, site, network, blog, domain
+Tags: multi, networks, site, network, blog, domain, subdomain, path, multisite, MS
+
 */
 
 /* ========================================================================== */
