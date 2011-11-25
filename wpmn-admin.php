@@ -20,7 +20,11 @@ class WPMN_Admin {
 	function __construct() {
 		add_action( 'admin_head',         array( &$this, 'admin_head'         ) );
 		add_action( 'network_admin_menu', array( &$this, 'network_admin_menu' ) );
-		add_action( 'wpmublogsaction',    array( &$this, 'assign_blogs_link'  ) );
+		
+		add_filter( 'manage_sites_action_links' , array(&$this,'add_move_blog_link'), 10, 3 );
+		if(!has_action('manage_sites_action_links')) {
+			add_action( 'wpmublogsaction',    array( &$this, 'assign_blogs_link'  ) );
+		}
 	}
 
 	function admin_url() {
@@ -115,7 +119,23 @@ class WPMN_Admin {
 
 	<?php
 	}
-
+	
+	/**
+	 * Add the Move action to Sites page on WP >= 3.1
+	 */
+	function add_move_blog_link( $actions, $cur_blog_id, $blog_name ) {
+		$url = add_query_arg( array(
+			'action'  => 'move',
+			'blog_id' => (int) $cur_blog_id ),
+			$this->admin_url()
+		);
+		$actions['move'] = '<a href="' . $url . '" class="edit">' . __( 'Move' ) . '</a>';
+		return $actions;
+	}
+	
+	/**
+	 * Legacy - add a Move link on Sites page on WP < 3.1
+	 */
 	function assign_blogs_link( $cur_blog_id ) {
 		$url = add_query_arg( array(
 			'action'  => 'move',
@@ -963,7 +983,7 @@ class WPMN_Admin {
 					restore_current_network();
 				}
 
-				$_GET['updated'] = 'yes';
+				$_GET['added'] = 'yes';
 				$_GET['action'] = 'saved';
 			} else {
 				foreach ( $result->errors as $i => $error ) {
