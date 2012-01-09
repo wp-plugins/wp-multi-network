@@ -19,10 +19,11 @@ class WPMN_Admin {
 
 	function __construct() {
 		add_action( 'admin_head',         array( &$this, 'admin_head'         ) );
+		add_action( 'admin_menu',		  array( &$this, 'admin_menu'		  ) );
 		add_action( 'network_admin_menu', array( &$this, 'network_admin_menu' ) );
 		
-		add_filter( 'manage_sites_action_links' , array(&$this,'add_move_blog_link'), 10, 3 );
-		if(!has_action('manage_sites_action_links')) {
+		add_filter( 'manage_sites_action_links', array( &$this, 'add_move_blog_link' ), 10, 3 );
+		if( ! has_action( 'manage_sites_action_links' ) ) {
 			add_action( 'wpmublogsaction',    array( &$this, 'assign_blogs_link'  ) );
 		}
 	}
@@ -36,83 +37,41 @@ class WPMN_Admin {
 	?>
 
 		<script type="text/javascript">
-			jQuery( '.if-js-closed' ).removeClass( 'if-js-closed' ).addClass( 'closed' );
-			jQuery( '.postbox' ).children( 'h3' ).click( function() {
-				if (jQuery( this.parentNode ).hasClass( 'closed' ) ) {
-					jQuery( this.parentNode ).removeClass( 'closed' );
-				} else {
-					jQuery( this.parentNode ).addClass( 'closed' );
-				}
-			} );
+			jQuery(document).ready( function() {
 
-			if ( document.getElementById ) {
-
-				var unassignButton = document.getElementById( 'unassign' );
-				var assignButton   = document.getElementById( 'assign' );
-				var fromBox        = document.getElementById( 'from' );
-				var toBox          = document.getElementById( 'to' );
-
-				/* add field to signal javascript is enabled */
-				var myJSVerifier   = document.createElement( 'input' );
-				myJSVerifier.type  = "hidden";
-				myJSVerifier.name  = "jsEnabled";
-				myJSVerifier.value = "true";
-
-				assignButton.parentNode.appendChild(myJSVerifier);
-
-				assignButton.onclick       = function() { move( fromBox, toBox ); };
-				unassignButton.onclick     = function() { move( toBox, fromBox ); };
-				assignButton.form.onsubmit = function() { selectAll( toBox ); };
-			}
-
-			// PickList II script (aka Menu Swapper)- By Phil Webb (http://www.philwebb.com)
-			// Visit JavaScript Kit (http://www.javascriptkit.com) for this JavaScript and 100s more
-			// Please keep this notice intact
-
-			function move(fbox, tbox) {
-				var arrFbox   = new Array();
-				var arrTbox   = new Array();
-				var arrLookup = new Array();
-				var i;
-				for(i=0; i<tbox.options.length; i++) {
-					arrLookup[tbox.options[i].text] = tbox.options[i].value;
-					arrTbox[i] = tbox.options[i].text;
-				}
-				var fLength = 0;
-				var tLength = arrTbox.length
-				for(i=0; i<fbox.options.length; i++) {
-					arrLookup[fbox.options[i].text] = fbox.options[i].value;
-					if(fbox.options[i].selected && fbox.options[i].value != "") {
-						arrTbox[tLength] = fbox.options[i].text;
-						tLength++;
+				jQuery( '.if-js-closed' ).removeClass( 'if-js-closed' ).addClass( 'closed' );
+				jQuery( '.postbox' ).children( 'h3' ).click( function() {
+					if (jQuery( this.parentNode ).hasClass( 'closed' ) ) {
+						jQuery( this.parentNode ).removeClass( 'closed' );
 					} else {
-						arrFbox[fLength] = fbox.options[i].text;
-						fLength++;
+						jQuery( this.parentNode ).addClass( 'closed' );
 					}
-				}
-				arrFbox.sort();
-				arrTbox.sort();
-				fbox.length = 0;
-				tbox.length = 0;
-				var c;
-				for(c=0; c<arrFbox.length; c++) {
-					var no = new Option();
-					no.value = arrLookup[arrFbox1];
-					no.text = arrFbox1;
-					fbox1 = no;
-				}
-				for(c=0; c<arrTbox.length; c++) {
-					var no = new Option();
-					no.value = arrLookup[arrTbox1];
-					no.text = arrTbox1;
-					tbox1 = no;
-				}
-			}
+				} );
+	
+				/** add field to signal javascript is enabled */
+				jQuery(document.createElement('input'))
+					.attr( 'type', 'hidden' )
+					.attr( 'name', 'jsEnabled' )
+					.attr( 'value', 'true' )
+					.appendTo( '#site-assign-form' );
+				
+				/** Handle clicks to add/remove sites to/from selected list */
+				jQuery( 'input[name=assign]' ).click( function() {		move( 'from', 'to' );	});
+				jQuery( 'input[name=unassign]' ).click( function() {	move( 'to', 'from' );	});
+				
+				/** Select all sites in "selected" box when submitting */
+				jQuery( '#site-assign-form' ).submit( function() {
+					jQuery( '#to' ).children( 'option' ).attr( 'selected', true );
+				});
 
-			function selectAll(box) {
-				for (var i=0; i<box.length; i++) {
-					box[i].selected = true;
-				}
+
+			});
+
+			function move( from, to ) {
+				jQuery( '#' + from ).children( 'option:selected' ).each( function() {
+					jQuery( '#' + to ).append( jQuery( this ).clone() );
+					jQuery( this ).remove();
+				});
 			}
 
 		</script>
@@ -143,6 +102,12 @@ class WPMN_Admin {
 			$this->admin_url()
 		);
 		echo '<a href="' . $url . '" class="edit">' . __( 'Move' ) . '</a>';
+	}
+
+	function admin_menu() {
+		if( user_has_networks() ) {
+			add_dashboard_page( __('My Networks'), __('My Networks'), 'manage_options', 'my-networks', array( &$this, 'my_networks_page' ) );
+		}
 	}
 
 	function network_admin_menu() {
@@ -489,22 +454,24 @@ class WPMN_Admin {
 											case 'domain': ?>
 
 												<td>
+													<label for="<?php echo $cur_site_id ?>"><?php echo $site['domain'] ?></label>
 													<?php
-													echo $site['domain'];
-													$actions = array( );
-													$actions[] = '<a class="edit" href="' . $cur_site_url . 'wp-admin/" title="' . __( 'Site Admin' ) . '">' . __( 'Site Admin' ) . '</a>';
-													$actions[] = '<a class="edit" href="' . $cur_site_url . 'wp-admin/network/" title="' . __( 'Network Admin' ) . '">' . __( 'Network Admin' ) . '</a>';
-													$actions[] = '<a class="edit" href="' . $query_str . "&amp;action=assignblogs&amp;id=" . $site['id'] . '" title="' . __( 'Assign sites to this network' ) . '">' . __( 'Assign Sites' ) . '</a>';
-													$actions[] = '<a class="edit" href="' . $query_str . "&amp;action=editnetwork&amp;id=" . $site['id'] . '" title="' . __( 'Edit this network' ) . '">' . __( 'Edit' ) . '</a>';
-													if ( $site['blogs'] == 0 || $site['id'] != 1 )
-														$actions[] = '<a class="delete" href="' . $query_str . "&amp;action=deletenetwork&amp;id=" . $site['id'] . '" title="' . __( 'Delete this network' ) . '">' . __( 'Delete' ) . '</a>';
-
-													if ( count( $actions ) ) : ?>
-
-														<div class="row-actions">
-															<?php echo implode( ' | ', $actions ); ?>
-														</div>
-
+													
+													$actions = array(
+//														'site_admin'		=> '<span class="edit"><a href="' . $cur_site_url . 'wp-admin/" title="' . __( 'Site Admin' ) . '">' . __( 'Site Admin' ) . '</a></span>',
+														'network_admin' 	=> '<span class="edit"><a href="' . $cur_site_url . 'wp-admin/network/" title="' . __( 'Network Admin' ) . '">' . __( 'Network Admin' ) . '</a></span>',
+														'assign_sites'		=> '<span class="edit"><a href="' . $query_str . '&amp;action=assignblogs&amp;id=' . $site['id'] . '" title="' . __( 'Assign sites to this network' ) . '">' . __( 'Assign Sites' ) . '</a></span>',
+														'edit'				=> '<span class="edit"><a class="edit_network_link" href="' . $query_str . '&amp;action=editnetwork&amp;id=' . $site['id'] . '" title="' . __( 'Edit this network' ) . '">' . __( 'Edit' ) . '</a></span>',
+													);
+													if( $site['id'] != 1 ) {
+														$actions['delete']	=  '<span class="delete"><a href="' . $query_str . '&amp;action=deletenetwork&amp;id=' .  $site['id'] . '" title="' . __( 'Delete this network' ) . '">' . __( 'Delete' ) . '</a></span>';
+													}
+													
+													?>
+													<?php if ( count( $actions ) ) : ?>
+													<div class="row-actions">
+														<?php echo implode( ' | ', $actions ); ?>
+													</div>
 													<?php endif; ?>
 												</td>
 
@@ -1214,6 +1181,13 @@ class WPMN_Admin {
 				</div></form>
 			<?php
 		}
+	}
+	
+	/**
+	 * Admin page for users who are network admins on another network, but possibly not the current one
+	 */
+	function my_networks_page() {
+		
 	}
 }
 

@@ -95,7 +95,7 @@ class WPMN_Loader {
 		require( $this->plugin_dir . 'wpmn-functions.php'  );
 		//require( $this->plugin_dir . 'wpmn-deprecated.php' );
 
-		if ( is_network_admin() ) {
+		if ( is_network_admin() || is_admin() ) {
 			require( $this->plugin_dir . 'wpmn-admin.php' );
 			new WPMN_Admin();
 		}
