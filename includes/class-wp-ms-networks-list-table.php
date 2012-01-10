@@ -74,17 +74,30 @@ class WP_MS_Networks_List_Table extends WP_List_Table {
 			}
 		}
 
-		$order_by = isset( $_REQUEST['orderby'] ) ? $_REQUEST['orderby'] : '';
-		$order_by = null;
-		
-		if ( isset( $order_by ) ) {
-			$order = ( isset( $_REQUEST['order'] ) && 'DESC' == strtoupper( $_REQUEST['order'] ) ) ? "DESC" : "ASC";
-			$query .= $order;
-		}
-
 		$total = $wpdb->get_var( str_replace( 'SELECT *', 'SELECT COUNT( site_id )', $query ) );
 
 		$query .= " GROUP BY {$wpdb->site}.id";
+
+		$order_by = isset( $_REQUEST['orderby'] ) ? $_REQUEST['orderby'] : '';
+		if( ! empty( $order_by ) ) {
+			switch($order_by) {
+				case 'domain':
+					$query .= ' ORDER BY ' . $wpdb->site . '.domain ';
+					break;
+				case 'sitename':
+					$query .= ' ORDER BY sitename ';
+					break;
+				case 'sites':
+					$query .= ' ORDER BY blogs ';
+					break;
+				default:
+			}
+		}
+		
+		if ( ! empty( $order_by ) ) {
+			$order = ( isset( $_REQUEST['order'] ) && 'DESC' == strtoupper( $_REQUEST['order'] ) ) ? "DESC" : "ASC";
+			$query .= $order;
+		}
 
 		$query .= " LIMIT " . intval( ( $pagenum - 1 ) * $per_page ) . ", " . intval( $per_page );
 		
@@ -106,8 +119,6 @@ class WP_MS_Networks_List_Table extends WP_List_Table {
 		$actions = array();
 		if ( current_user_can( 'delete_sites' ) )
 			$actions['delete'] = __( 'Delete' );
-		$actions['spam'] = _x( 'Mark as Spam', 'site' );
-		$actions['notspam'] = _x( 'Not Spam', 'site' );
 
 		return $actions;
 	}
@@ -140,13 +151,14 @@ class WP_MS_Networks_List_Table extends WP_List_Table {
 		return array(
 			'sitename'    => 'sitename',
 			'domain'      => 'domain',
+			'blogs'		  => 'sites'
 		);
 	}
 
 	function display_rows() {
 		global $current_site, $mode;
 
-		print_r($this->items);
+//		print_r($this->items);
 
 		$class = '';
 		foreach ( $this->items as $network ) {

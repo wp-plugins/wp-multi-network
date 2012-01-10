@@ -515,7 +515,12 @@ function user_has_networks( $user_id = null ) {
 		$user_id = (int)$user_id;
 		$user_info = get_userdata( $user_id );
 		$user_login = $user_info->user_login;
+		
 	}
+	
+//	if($my_networks = wp_cache_get( $user_id, 'my_networks' )) {
+//		return $my_networks;
+//	}
 	
 	$my_networks = array();
 	$network_admin_records = $wpdb->get_results( $wpdb->prepare( 'SELECT site_id, meta_value FROM ' . $wpdb->sitemeta . ' WHERE meta_key=%s', 'site_admins' ) );
@@ -528,7 +533,11 @@ function user_has_networks( $user_id = null ) {
 		
 	}
 	
-	if( ! empty( $my_networks ) )	return apply_filters( 'networks_user_is_network_admin', $my_networks, $user_id);	// TODO: better filter name
+	$my_networks = apply_filters( 'networks_user_is_network_admin', $my_networks, $user_id);	// TODO: better filter name
+	
+//	wp_cache_set( $user_id, $my_networks, 'my_networks' );
+	
+	if( ! empty( $my_networks ) )	return $my_networks;
 	return false;
 	
 }

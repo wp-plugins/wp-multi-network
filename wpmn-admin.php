@@ -114,6 +114,8 @@ class WPMN_Admin {
 		$page = add_menu_page( __( 'Networks' ), __( 'Networks' ), 'manage_options', 'networks', array( &$this, 'networks_page' ), '', -1 );
 		add_submenu_page( 'networks', __( 'All Networks' ), __( 'All Networks' ), 'manage_options', 'networks',        array( &$this, 'networks_page' ) );
 		add_submenu_page( 'networks', __( 'Add New'      ), __( 'Add New'      ), 'manage_options', 'add-new-network', array( &$this, 'add_network_page' ) );
+
+//		add_submenu_page( 'settings.php', __('Networks Settings'), __('Networks Settings'), 'manage_network_options', 'networks-settings', array( &$this, 'networks_settings_page' ) );
 		
 		require dirname(__FILE__) . '/includes/class-wp-ms-networks-list-table.php';
 		add_filter( 'manage_' . $page . '-network' . '_columns', array( new WP_MS_Networks_List_Table(), 'get_columns' ), 0 );
@@ -217,7 +219,7 @@ class WPMN_Admin {
 			<h2><?php _e('Networks') ?>
 			<?php $this->feedback() ?>
 			<?php if ( current_user_can( 'manage_network_options' ) ) : ?>
-			        <a href="<?php echo $this->admin_url() ?>" class="add-new-h2"><?php echo esc_html_x( 'Add New', 'site' ); ?></a>
+			        <a href="<?php echo add_query_arg(array('page'=>'add-new-network'), $this->admin_url())  ?>" class="add-new-h2"><?php echo esc_html_x( 'Add New', 'site' ); ?></a>
 			<?php endif; ?>
 			
 			<?php if ( isset( $_REQUEST['s'] ) && $_REQUEST['s'] ) {
@@ -431,8 +433,8 @@ class WPMN_Admin {
 				die( __( 'You must select a blog to move.' ) );
 			}
 
-			$query = "SELECT * FROM {$wpdb->blogs} WHERE blog_id=" . (int) $_GET['blog_id'];
-			$site = $wpdb->get_row( $wpdb->prepare( $query ) );
+			$query = "SELECT * FROM {$wpdb->blogs} WHERE blog_id=%d";
+			$site = $wpdb->get_row( $wpdb->prepare( $query, (int)$_GET['blog_id'] ) );
 
 			if ( !$site )
 				die( __( 'Invalid blog id.' ) );
@@ -668,8 +670,8 @@ class WPMN_Admin {
 		global $wpdb;
 
 		if ( isset( $_POST['update'] ) && isset( $_GET['id'] ) ) {
-			$query = "SELECT * FROM {$wpdb->site} WHERE id=" . (int) $_GET['id'];
-			$network = $wpdb->get_row( $wpdb->prepare( $query ) );
+			$query = "SELECT * FROM {$wpdb->site} WHERE id=%d";
+			$network = $wpdb->get_row( $wpdb->prepare( $query, (int)$_GET['id'] ) );
 			if ( !$network )
 				die( __( 'Invalid network id.' ) );
 
@@ -679,8 +681,8 @@ class WPMN_Admin {
 		} else {
 
 			// get network by id
-			$query = "SELECT * FROM {$wpdb->site} WHERE id=" . (int) $_GET['id'];
-			$network = $wpdb->get_row( $wpdb->prepare( $query ) );
+			$query = "SELECT * FROM {$wpdb->site} WHERE id=%d";
+			$network = $wpdb->get_row( $wpdb->prepare( $query, (int)$_GET['id'] ) );
 
 			if ( !$network )
 				wp_die( __( 'Invalid network id.' ) );
@@ -734,14 +736,14 @@ class WPMN_Admin {
 		} else {
 
 			/* get network by id */
-			$query = "SELECT * FROM {$wpdb->site} WHERE id=" . (int) $_GET['id'];
-			$network = $wpdb->get_row( $wpdb->prepare( $query ) );
+			$query = "SELECT * FROM {$wpdb->site} WHERE id=%d";
+			$network = $wpdb->get_row( $wpdb->prepare( $query, (int)$_GET['id'] ) );
 
 			if ( !$network )
 				die( __( 'Invalid network id.' ) );
 
-			$query = "SELECT * FROM {$wpdb->blogs} WHERE site_id=" . (int) $_GET['id'];
-			$sites = $wpdb->get_results( $wpdb->prepare( $query ) );
+			$query = "SELECT * FROM {$wpdb->blogs} WHERE site_id=%d";
+			$sites = $wpdb->get_results( $wpdb->prepare( $query, (int)$_GET['id'] ) );
 
 			/* strip off the action tag */
 			$query_str = substr( $_SERVER['REQUEST_URI'], 0, ( strpos( $_SERVER['REQUEST_URI'], '?' ) + 1 ) );
@@ -891,6 +893,13 @@ class WPMN_Admin {
 	 * Admin page for users who are network admins on another network, but possibly not the current one
 	 */
 	function my_networks_page() {
+		
+	}
+	
+	/**
+	 * Admin page for Networks settings - 
+	 */
+	function networks_settings_page() {
 		
 	}
 }
