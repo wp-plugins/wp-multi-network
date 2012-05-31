@@ -419,7 +419,8 @@ function move_site( $site_id, $new_network_id ) {
 	}
 
 	// Tweak the domain and path as needed
-	if ( is_subdomain_install() ) {
+	// If the site domain is the same as the network domain on a subdomain install, don't prepend old "hostname"
+	if ( is_subdomain_install() && ( $site->domain != $old_network->domain ) ) {
 		$ex_dom = substr( $site->domain, 0, ( strpos( $site->domain, '.' ) + 1 ) );
 		$domain = $ex_dom . $new_network->domain;
 	} else {
@@ -497,6 +498,7 @@ function network_options_to_copy() {
  * 
  * Return array of networks for which user is super admin, or FALSE if none
  * 
+ * @since 1.3
  * @return array | FALSE
  */
 function user_has_networks( $user_id = null ) {

@@ -242,112 +242,22 @@ class WPMN_Admin {
 	function add_network_page() {
 		global $wpdb;
 
-		// Strip off the action tag
-		$query_str  = substr( $_SERVER['REQUEST_URI'], 0, ( strpos( $_SERVER['REQUEST_URI'], '?' ) + 1 ) );
-		$get_params = array();
-		$bad_params = array( 'action', 'id', 'updated', 'deleted' );
-		foreach ( $_GET as $get_param => $get_value ) {
-			if ( !in_array( $get_param, $bad_params ) ) {
-				$get_params[] = $get_param . '=' . $get_value;
-			}
-		}
-		$query_str .= implode( '&', $get_params );
+		// Strip off URL parameters
+		$query_str = remove_query_arg(array(
+			'action', 'id', 'updated', 'deleted'
+		));
 
-		$search_conditions = '';
-		if ( isset( $_GET['s'] ) ) {
-			if ( isset( $_GET['search'] ) && $_GET['search'] == __( 'Search Domains' ) ) {
-				$search_conditions = 'WHERE ' . $wpdb->site . '.domain LIKE ' . "'%" . $wpdb->escape( $_GET['s'] ) . "%'";
-			}
-		}
-
-		$count = $wpdb->get_col( $wpdb->prepare( 'SELECT COUNT(id) FROM ' . $wpdb->site . $search_conditions ) );
-		$total = $count[0];
-
-		if ( isset( $_GET['start'] ) == false ) {
-			$start = 1;
-		} else {
-			$start = intval( $_GET['start'] );
-		}
-
-		if ( isset( $_GET['num'] ) == false ) {
-			$num = NETWORKS_PER_PAGE;
-		} else {
-			$num = intval( $_GET['num'] );
-		}
-
-		$query =   "SELECT {$wpdb->site}.*, COUNT({$wpdb->blogs}.blog_id) as blogs, {$wpdb->blogs}.path as blog_path
-						FROM {$wpdb->site}
-					LEFT JOIN {$wpdb->blogs}
-						ON {$wpdb->blogs}.site_id = {$wpdb->site}.id {$search_conditions}
-						GROUP BY {$wpdb->site}.id";
-
-		if ( isset( $_GET['sortby'] ) ) {
-			$sortby = $_GET['sortby'];
-		} else {
-			$sortby = 'ID';
-		}
-
-		switch ( $sortby ) {
-			case 'Domain':
-				$query .= ' ORDER BY ' . $wpdb->site . '.domain ';
-				break;
-
-			case 'Path':
-				$query .= ' ORDER BY ' . $wpdb->site . '.path ';
-				break;
-
-			case 'Blogs':
-				$query .= ' ORDER BY blogs ';
-				break;
-
-			case 'ID':
-			default:
-				$query .= ' ORDER BY ' . $wpdb->site . '.id ';
-		}
-
-		if ( isset( $_GET['order'] ) && ( $_GET['order'] == 'DESC' ) ) {
-			$query .= 'DESC';
-		} else {
-			$query .= 'ASC';
-		}
-
-		$query .= ' LIMIT ' . ( ( (int) $start - 1 ) * $num ) . ', ' . intval( $num );
-
-		$site_list = $wpdb->get_results( $wpdb->prepare( $query ), ARRAY_A );
-
-		if ( count( $site_list ) < $num ) {
-			$next = false;
-		} else {
-			$next = true;
-		}
-
-		// define the columns to display, the syntax is 'internal name' => 'display name'
-		$sites_columns = array(
-			'check'  => '',
-			'domain' => __( 'Domain' ),
-			'id'     => __( 'Site ID' ),
-			'path'   => __( 'Path' ),
-			'blogs'  => __( 'Sites' ),
-		);
-		$sites_columns = apply_filters( 'manage_networks_columns', $sites_columns );
-
-		// Pagination
-		$network_navigation = paginate_links( array(
-			'base'    => add_query_arg( 'start', '%#%' ),
-			'format'  => '',
-			'total'   => ceil( $total / $num ),
-			'current' => $start
-		) ); ?>
+		?>
 
 		<div id="icon-ms-admin" class="icon32"></div>
 		<h2><?php _e( 'Networks' ) ?></h2>
 
 		<div id="col-container">
 			<p><?php _e( 'A site will be created at the root of the new network' ); ?>.</p>
-			<form method="POST" action="<?php echo $_SERVER['REQUEST_URI'] . "&amp;action=addnetwork"; ?>">
+			<form method="POST" action="<?php echo add_query_arg( array( 'action' => 'addnetwork' ), $query_str ); ?>">
 				<table class="form-table">
 					<tr><th scope="row"><label for="newName"><?php _e( 'Network Name' ); ?>:</label></th><td><input type="text" name="name" id="newName" title="<?php _e( 'A friendly name for your new network' ); ?>" /></td></tr>
-					<tr><th scope="row"><label for="newDom"><?php _e( 'Domain' ); ?>:</label></th><td> http://<input type="text" name="domain" id="newDom" title="<?php _e( 'The domain for your new network' ); ?>" /></td></tr>
+					<tr><th scope="row"><label for="newDom"><?php  _e( 'Domain' ); ?>:</label></th><td> http://<input type="text" name="domain" id="newDom" title="<?php _e( 'The domain for your new network' ); ?>" /></td></tr>
 					<tr><th scope="row"><label for="newPath"><?php _e( 'Path' ); ?>:</label></th><td><input type="text" name="path" id="newPath" title="<?php _e( 'If you are unsure, put in /' ); ?>" /></td></tr>
 					<tr><th scope="row"><label for="newSite"><?php _e( 'Site Name' ); ?>:</label></th><td><input type="text" name="newSite" id="newSite" title="<?php _e( 'The name for the new network\'s site.' ); ?>" /></td></tr>
 				</table>
@@ -363,14 +273,9 @@ class WPMN_Admin {
 									<td colspan="2">
 										<select name="cloneNetwork" id="cloneNetwork">
 											<option value="0"><?php _e( 'Do Not Clone' ); ?></option>
-
-												<?php
-													foreach ( $network_list as $network ) {
-														echo '                                          ' .
-														'<option value="' . $network['id'] . '"' . ($network['id'] == 1 ? ' selected' : '' ) . '>' . $network['domain'] . '</option>';
-													}
-												?>
-
+											<?php foreach ( $network_list as $network ) { ?>
+											<option value="<?php echo $network['id'] ?>" <?php selected( $network['id'] ) ?>><?php echo $network['domain'] ?></option>
+											<?php } ?>
 										</select>
 									</td>
 								</tr>
@@ -472,13 +377,10 @@ class WPMN_Admin {
 			<?php
 			foreach ( $sites as $network ) {
 				if ( $network->id != $myNetwork->id )  : ?>
-				<option value="<?php echo $network->id ?>"><?php echo $network->domain
-
-				?></option>
+				<option value="<?php echo $network->id ?>"><?php echo $network->domain; ?></option>
 				<?php
 				endif;
 			}
-
 			?>
 							</select>
 						</td>
@@ -490,7 +392,7 @@ class WPMN_Admin {
 						<thead>
 							<tr scope="col"><th colspan="2"><?php _e( 'Options' ); ?>:</th></tr>
 						</thead>
-				<?php do_action( 'add_move_blog_option', $site->blog_id ); ?>
+						<?php do_action( 'add_move_blog_option', $site->blog_id ); ?>
 					</table>
 					<br />
 				<?php endif; ?>
@@ -581,14 +483,13 @@ class WPMN_Admin {
 					</thead>
 					<tr>
 						<td>
-							<select name="from[]" id="from" multiple style="height: auto; width: 98%">
-			<?php
-			foreach ( $sites as $site ) {
-				if ( $site->site_id != $network->id )
-					echo '<option value="' . $site->blog_id . '">' . $site->name . ' (' . $site->domain . ')</option>';
-			}
-
-			?>
+							<select name="from[]" id="from" multiple style="height: auto; width: 98%;">
+							<?php
+							foreach ( $sites as $site ) {
+								if ( $site->site_id != $network->id )
+									echo '<option value="' . $site->blog_id . '">' . $site->name . ' (' . $site->domain . ')</option>';
+							}
+							?>
 							</select>
 						</td>
 						<td>
@@ -596,23 +497,24 @@ class WPMN_Admin {
 							<input type="button" name="assign" id="assign" value=">>" />
 						</td>
 						<td valign="top">
-			<?php if ( !ENABLE_NETWORK_ZERO ) { ?><ul style="margin: 0; padding: 0; list-style-type: none;">
-				<?php foreach ( $sites as $site ) {
-					if ( $site->site_id == $network->id ) { ?>
-											<li><?php echo $site->name . ' (' . $site->domain . ')'; ?></li>
-					<?php }
-				} ?>
-								</ul><?php } ?>
+						<?php if ( ! ENABLE_NETWORK_ZERO ) { ?>
+							<ul style="margin: 0; padding: 0; list-style-type: none;">
+							<?php foreach ( $sites as $site ) { ?>
+								<? if ( $site->site_id == $network->id ) { ?>
+								<li><?php echo $site->name . ' (' . $site->domain . ')'; ?></li>
+								<?php } ?>
+							<?php } ?>
+							</ul>
+						<?php } ?>
 							<select name="to[]" id="to" multiple style="height: auto; width: 98%">
-			<?php
-			if ( ENABLE_NETWORK_ZERO ) {
-				foreach ( $sites as $site ) {
-					if ( $site->site_id == $network->id )
-						echo '<option value="' . $site->blog_id . '">' . $site->name . ' (' . $site->domain . ')</option>';
-				}
-			}
-
-			?>
+								<?php
+								if ( ENABLE_NETWORK_ZERO ) {
+									foreach ( $sites as $site ) {
+										if ( $site->site_id == $network->id )
+											echo '<option value="' . $site->blog_id . '">' . $site->name . ' (' . $site->domain . ')</option>';
+									}
+								}
+								?>
 							</select>
 						</td>
 					</tr>
@@ -687,21 +589,11 @@ class WPMN_Admin {
 			if ( !$network )
 				wp_die( __( 'Invalid network id.' ) );
 
-			/* strip off the action tag */
-			$query_str = substr( $_SERVER['REQUEST_URI'], 0, ( strpos( $_SERVER['REQUEST_URI'], '?' ) + 1 ) );
-			$get_params = array( );
-
-			foreach ( $_GET as $get_param => $get_value ) {
-				if ( $get_param != 'action' )
-					$get_params[] = $get_param . '=' . $get_value;
-			}
-			$query_str .= implode( '&', $get_params );
-
 			?>
 			<div id="icon-ms-admin" class="icon32"></div>
 			<h2><?php _e( 'WP Multi-Network' ) ?></h2>
 			<h3><?php _e( 'Edit Network' ); ?>: http://<?php echo $network->domain . $network->path ?></h3>
-			<form method="post" action="<?php echo $query_str; ?>">
+			<form method="post" action="<?php echo remove_query_arg( 'action' ); ?>">
 				<table class="form-table">
 					<tr class="form-field"><th scope="row"><label for="domain"><?php _e( 'Domain' ); ?></label></th><td> http://<input type="text" id="domain" name="domain" value="<?php echo $network->domain; ?>"></td></tr>
 					<tr class="form-field"><th scope="row"><label for="path"><?php _e( 'Path' ); ?></label></th><td><input type="text" id="path" name="path" value="<?php echo $network->path; ?>" /></td></tr>
@@ -744,19 +636,9 @@ class WPMN_Admin {
 
 			$query = "SELECT * FROM {$wpdb->blogs} WHERE site_id=%d";
 			$sites = $wpdb->get_results( $wpdb->prepare( $query, (int)$_GET['id'] ) );
-
-			/* strip off the action tag */
-			$query_str = substr( $_SERVER['REQUEST_URI'], 0, ( strpos( $_SERVER['REQUEST_URI'], '?' ) + 1 ) );
-			$get_params = array( );
-
-			foreach ( $_GET as $get_param => $get_value ) {
-				if ( $get_param != 'action' )
-					$get_params[] = $get_param . '=' . $get_value;
-			}
-			$query_str .= implode( '&', $get_params );
-
+			
 			?>
-			<form method="POST" action="<?php echo $query_str; ?>">
+			<form method="POST" action="<?php echo remove_query_arg( 'action' ); ?>">
 				<div>
 					<div id="icon-ms-admin" class="icon32"></div>
 					<h2><?php _e( 'WP Multi-Network' ); ?></h2>
