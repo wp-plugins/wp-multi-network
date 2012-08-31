@@ -198,7 +198,7 @@ class WP_MS_Networks_List_Table extends WP_List_Table {
 					case 'sitename':
 						echo "<td class='column-$column_name $column_name'$style>"; 
 							
-						$siteurl = 'http://' . $network['domain'] . $network['blog_path'];
+						$siteurl = ( is_ssl() ? 'https' : 'http' ) . '://' . $network['domain'] . $network['blog_path'];
 						
 						$myurl = add_query_arg(array(
 							'mode'	=> false,
@@ -255,14 +255,14 @@ class WP_MS_Networks_List_Table extends WP_List_Table {
 				case 'plugins': ?>
 					<?php if ( has_filter( 'wpmublogsaction' ) ) {
 					echo "<td valign='top' class='$column_name column-$column_name'$style>";
-						do_action( 'wpmublogsaction', $blog['blog_id'] ); ?>
+						do_action( 'wpmublogsaction', $network['id'] ); ?>
 					</td>
 					<?php }
 					break;
 
 				default:
 					echo "<td class='$column_name column-$column_name'$style>";
-					do_action( 'manage_sites_custom_column', $column_name, $blog['blog_id'] );
+					do_action( 'manage_sites_custom_column', $column_name, $network['id'] );
 					echo "</td>";
 					break;
 				}
