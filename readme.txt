@@ -2,8 +2,8 @@
 Contributors: johnjamesjacoby, BrianLayman, ddean
 Tags: network, networks, blog, blogs, site, sites, domain, domains, mapping, domain mapping, fun
 Requires at least: WordPress 3.0
-Tested up to: WordPress 3.3
-Stable tag: 1.1
+Tested up to: WordPress 3.5
+Stable tag: 1.3
 
 == Description ==
 
