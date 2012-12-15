@@ -344,7 +344,7 @@ class WPMN_Admin {
 				die( __( 'Invalid blog id.' ) );
 
 			$table_name = $wpdb->get_blog_prefix( $site->blog_id ) . "options";
-			$details    = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table_name} WHERE option_name = 'blogname'" ) );
+			$details    = $wpdb->get_row( "SELECT * FROM {$table_name} WHERE option_name = 'blogname'" );
 
 			if ( !$details )
 				die( __( 'Invalid blog id.' ) );
