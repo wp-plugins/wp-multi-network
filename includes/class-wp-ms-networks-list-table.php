@@ -123,23 +123,17 @@ class WP_MS_Networks_List_Table extends WP_List_Table {
 	}
 
 	function pagination( $which ) {
-		global $mode;
-
 		parent::pagination( $which );
-
-		if ( 'top' == $which ) {
-			$this->view_switcher( $mode );
-		}
 	}
 
 	function get_columns() {
 		return apply_filters( 'wpmn_networks_columns', array(
-			'cb'			=> '<input type="checkbox" />',
-			'sitename'		=> __( 'Site Name' ),
-			'domain' 		=> __( 'Domain' ),
-			'path'   		=> __( 'Path' ),
-			'blogs'  		=> __( 'Sites' ),
-			'admins' 		=> __( 'Network Admins' )
+			'cb'       => '<input type="checkbox" />',
+			'sitename' => __( 'Site Name' ),
+			'domain'   => __( 'Domain' ),
+			'path'     => __( 'Path' ),
+			'blogs'    => __( 'Sites' ),
+			'admins'   => __( 'Network Admins' )
 		) );
 	}
 
@@ -152,7 +146,7 @@ class WP_MS_Networks_List_Table extends WP_List_Table {
 	}
 
 	function display_rows() {
-		global $current_site, $mode;
+		global $current_site;
 
 		$class = '';
 
@@ -195,8 +189,7 @@ class WP_MS_Networks_List_Table extends WP_List_Table {
 							
 						$siteurl = ( is_ssl() ? 'https' : 'http' ) . '://' . $network['domain'] . $network['blog_path'];
 						
-						$myurl = add_query_arg(array(
-							'mode' => false,
+						$myurl = add_query_arg( array(
 							'page' => 'networks',
 							'id'   => $network['id']
 						) ); ?>
@@ -205,9 +198,6 @@ class WP_MS_Networks_List_Table extends WP_List_Table {
 
 						<?php						
 						
-						if ( 'list' != $mode )
-							echo '<p></p>';
-
 						$actions = array(
 							'network_admin' => '<span class="edit"><a href="' . $siteurl . 'wp-admin/network/" title="' . __( 'Network Admin' ) . '">' . __( 'Network Admin' ) . '</a></span>',
 							'assign_sites'  => '<span class="edit"><a href="' . add_query_arg(array( 'action'	=> 'assignblogs' ), $myurl ) . '" title="' . __( 'Assign sites to this network' ) . '">' . __( 'Assign Sites' ) . '</a></span>',
