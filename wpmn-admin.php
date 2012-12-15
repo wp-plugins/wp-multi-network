@@ -208,22 +208,23 @@ class WPMN_Admin {
 
 	function all_networks() {
 		
-		$wp_list_table = new WP_MS_Networks_List_Table();
-		
-		$pagenum = $wp_list_table->get_pagenum();
-		$wp_list_table->prepare_items();
+		$wp_list_table = new WP_MS_Networks_List_Table();		
+		$wp_list_table->prepare_items(); ?>
 
-		?>
 		<div class="wrap">
 			<?php screen_icon('ms-admin'); ?>
 			<h2><?php _e('Networks') ?>
+
 			<?php $this->feedback() ?>
+
 			<?php if ( current_user_can( 'manage_network_options' ) ) : ?>
+
 			        <a href="<?php echo add_query_arg(array('page'=>'add-new-network'), $this->admin_url())  ?>" class="add-new-h2"><?php echo esc_html_x( 'Add New', 'site' ); ?></a>
+
 			<?php endif; ?>
 			
 			<?php if ( isset( $_REQUEST['s'] ) && $_REQUEST['s'] ) {
-				printf( '<span class="subtitle">' . __( 'Search results for &#8220;%s&#8221;' ) . '</span>', esc_html( $s ) );
+				printf( '<span class="subtitle">' . __( 'Search results for &#8220;%s&#8221;' ) . '</span>', esc_html( $_REQUEST['s'] ) );
 			} ?>
 			</h2>
 			
@@ -269,7 +270,7 @@ class WPMN_Admin {
 							<table class="form-table">
 								<tr>
 									<th scope="row"><label for="cloneNetwork"><?php _e( 'Clone Network' ); ?>:</label></th>
-										<?php $network_list = $wpdb->get_results( $wpdb->prepare( 'SELECT id, domain FROM ' . $wpdb->site ), ARRAY_A ); ?>
+										<?php $network_list = $wpdb->get_results( 'SELECT id, domain FROM ' . $wpdb->site, ARRAY_A ); ?>
 									<td colspan="2">
 										<select name="cloneNetwork" id="cloneNetwork">
 											<option value="0"><?php _e( 'Do Not Clone' ); ?></option>
@@ -281,7 +282,8 @@ class WPMN_Admin {
 								</tr>
 								<tr>
 									<?php
-										$all_network_options       = $wpdb->get_results( $wpdb->prepare( 'SELECT DISTINCT meta_key FROM ' . $wpdb->sitemeta ) );
+										$class                     = '';
+										$all_network_options       = $wpdb->get_results( 'SELECT DISTINCT meta_key FROM ' . $wpdb->sitemeta );
 										$known_networkmeta_options = network_options_to_copy();
 										$known_networkmeta_options = apply_filters( 'manage_sitemeta_descriptions', $known_networkmeta_options );
 									?>
@@ -338,26 +340,25 @@ class WPMN_Admin {
 				die( __( 'You must select a blog to move.' ) );
 			}
 
-			$query = "SELECT * FROM {$wpdb->blogs} WHERE blog_id=%d";
-			$site = $wpdb->get_row( $wpdb->prepare( $query, (int)$_GET['blog_id'] ) );
+			$site = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$wpdb->blogs} WHERE blog_id = %d", (int)$_GET['blog_id'] ) );
 
 			if ( !$site )
 				die( __( 'Invalid blog id.' ) );
 
 			$table_name = $wpdb->get_blog_prefix( $site->blog_id ) . "options";
-			$details = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table_name} WHERE option_name='blogname'" ) );
+			$details    = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table_name} WHERE option_name = 'blogname'" ) );
 
 			if ( !$details )
 				die( __( 'Invalid blog id.' ) );
 
-			$sites = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$wpdb->site}" ) );
+			$sites = $wpdb->get_results( "SELECT * FROM {$wpdb->site}" );
 
 			foreach ( $sites as $key => $network ) {
-				if ( $network->id == $site->site_id )
+				if ( $network->id == $site->site_id ) {
 					$myNetwork = $sites[$key];
-			}
+				}
+			} ?>
 
-			?>
 			<div id="icon-ms-admin" class="icon32"></div>
 			<h2><?php _e( 'WP Multi-Network' ) ?></h2>
 			<h3><?php echo __( 'Moving' ) . ' ' . stripslashes( $details->option_value ); ?></h3>
@@ -425,7 +426,7 @@ class WPMN_Admin {
 				$sites = $_POST['from'];
 			}
 
-			$current_blogs = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$wpdb->blogs} WHERE site_id=%d", (int)$_GET['id'] ) );
+			$current_blogs = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$wpdb->blogs} WHERE site_id = %d", (int) $_GET['id'] ) );
 
 			foreach ( $sites as $site ) {
 				move_site( $site, (int) $_GET['id'] );
@@ -445,19 +446,18 @@ class WPMN_Admin {
 		} else {
 
 			// get network by id
-			$query = "SELECT * FROM {$wpdb->site} WHERE id=%d";
-			$network = $wpdb->get_row( $wpdb->prepare( $query, (int) $_GET['id'] ) );
+			$network = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$wpdb->site} WHERE id = %d", (int) $_GET['id'] ) );
 
 			if ( !$network )
 				die( __( 'Invalid network id.' ) );
 
-			$sites = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$wpdb->blogs}" ) );
+			$sites = $wpdb->get_results( "SELECT * FROM {$wpdb->blogs}" );
 			if ( !$sites )
 				die( __( 'Site table inaccessible.' ) );
 
 			foreach ( $sites as $key => $site ) {
 				$table_name = $wpdb->get_blog_prefix( $site->blog_id ) . "options";
-				$site_name = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table_name WHERE option_name=%s", 'blogname' ) );
+				$site_name = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table_name} WHERE option_name = %s", 'blogname' ) );
 
 				if ( !$site_name )
 					die( __( 'Invalid blog.' ) );
@@ -500,7 +500,7 @@ class WPMN_Admin {
 						<?php if ( ! ENABLE_NETWORK_ZERO ) { ?>
 							<ul style="margin: 0; padding: 0; list-style-type: none;">
 							<?php foreach ( $sites as $site ) { ?>
-								<? if ( $site->site_id == $network->id ) { ?>
+								<?php if ( $site->site_id == $network->id ) { ?>
 								<li><?php echo $site->name . ' (' . $site->domain . ')'; ?></li>
 								<?php } ?>
 							<?php } ?>
@@ -572,19 +572,17 @@ class WPMN_Admin {
 		global $wpdb;
 
 		if ( isset( $_POST['update'] ) && isset( $_GET['id'] ) ) {
-			$query = "SELECT * FROM {$wpdb->site} WHERE id=%d";
-			$network = $wpdb->get_row( $wpdb->prepare( $query, (int)$_GET['id'] ) );
+			$network = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$wpdb->site} WHERE id = %d", (int) $_GET['id'] ) );
 			if ( !$network )
 				die( __( 'Invalid network id.' ) );
 
 			update_network( (int) $_GET['id'], $_POST['domain'], $_POST['path'] );
 			$_GET['updated'] = 'true';
-			$_GET['action'] = 'saved';
+			$_GET['action']  = 'saved';
 		} else {
 
 			// get network by id
-			$query = "SELECT * FROM {$wpdb->site} WHERE id=%d";
-			$network = $wpdb->get_row( $wpdb->prepare( $query, (int)$_GET['id'] ) );
+			$network = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$wpdb->site} WHERE id = %d", (int) $_GET['id'] ) );
 
 			if ( !$network )
 				wp_die( __( 'Invalid network id.' ) );
@@ -628,16 +626,13 @@ class WPMN_Admin {
 		} else {
 
 			/* get network by id */
-			$query = "SELECT * FROM {$wpdb->site} WHERE id=%d";
-			$network = $wpdb->get_row( $wpdb->prepare( $query, (int)$_GET['id'] ) );
+			$network = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$wpdb->site} WHERE id = %d", (int) $_GET['id'] ) );
 
 			if ( !$network )
 				die( __( 'Invalid network id.' ) );
 
-			$query = "SELECT * FROM {$wpdb->blogs} WHERE site_id=%d";
-			$sites = $wpdb->get_results( $wpdb->prepare( $query, (int)$_GET['id'] ) );
-			
-			?>
+			$sites = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$wpdb->blogs} WHERE site_id = %d", (int) $_GET['id'] ) ); ?>
+
 			<form method="POST" action="<?php echo remove_query_arg( 'action' ); ?>">
 				<div>
 					<div id="icon-ms-admin" class="icon32"></div>
@@ -710,16 +705,13 @@ class WPMN_Admin {
 				$allnetworks = $sites;
 			}
 
-			$query = "SELECT * FROM {$wpdb->site} WHERE id IN (" . implode( ',', $allnetworks ) . ')';
-			$network = $wpdb->get_results( $wpdb->prepare( $query ) );
+			$network = $wpdb->get_results( "SELECT * FROM {$wpdb->site} WHERE id IN (" . implode( ',', $allnetworks ) . ')' );
 			if ( !$network ) {
 				wp_die( __( 'You have selected an invalid network or networks for deletion' ) );
 			}
 
-			$query = "SELECT * FROM {$wpdb->blogs} WHERE site_id IN (" . implode( ',', $allnetworks ) . ')';
-			$sites = $wpdb->get_results( $wpdb->prepare( $query ) );
+			$sites = $wpdb->get_results( "SELECT * FROM {$wpdb->blogs} WHERE site_id IN (" . implode( ',', $allnetworks ) . ')' ); ?>
 
-			?>
 			<form method="POST" action="<?php echo $this->admin_url(); ?>"><div>
 					<div id="icon-ms-admin" class="icon32"></div>
 					<h2><?php _e( 'WP Multi-Network' ) ?></h2>

@@ -7,6 +7,7 @@
  * Refreshed by John James Jacoby for WordPress 3.0
  * Refreshed by Brian Layman for WordPress 3.1
  * Refreshed by John James Jacoby for WordPress 3.3
+ * Refreshed by John James Jacoby for WordPress 3.5
  *
  * @package WPMN
  * @subpackage Loader
@@ -16,7 +17,7 @@
  * Plugin Name: WP Multi-Network
  * Plugin URI:  http://wordpress.org/extend/plugins/wp-multi-network/
  * Description: Adds a Network Management UI for super admins in a WordPress Multisite environment
- * Version:     1.3
+ * Version:     1.3.1
  * Author:      johnjamesjacoby, BrianLayman, ddean
  * Author URI:  http://johnjamesjacoby.com
  * Tags: multi, networks, site, network, blog, domain, subdomain, path, multisite, MS

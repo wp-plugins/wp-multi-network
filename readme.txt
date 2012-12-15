@@ -3,7 +3,7 @@ Contributors: johnjamesjacoby, BrianLayman, ddean
 Tags: network, networks, blog, blogs, site, sites, domain, domains, mapping, domain mapping, fun
 Requires at least: WordPress 3.0
 Tested up to: WordPress 3.5
-Stable tag: 1.3
+Stable tag: 1.3.1
 
 == Description ==
 
@@ -38,6 +38,10 @@ The WordPress support forums: http://wordpress.org/tags/wp-multi-network/
 Not much to talk about really. Check the code for details!
 
 == Changelog ==
+
+= 1.3.1 =
+* Fix prepare() usages
+* Fix some debug notices
 
 = 1.3 =
 * Refactor into smaller pieces
