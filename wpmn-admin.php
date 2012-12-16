@@ -29,7 +29,7 @@ class WPMN_Admin {
 	}
 
 	function admin_url() {
-		$result = add_query_arg( array( 'page' => 'networks' ), esc_url( network_admin_url() ) );
+		$result = add_query_arg( array( 'page' => 'networks' ), esc_url( network_admin_url( 'admin.php' ) ) );
 		return $result;
 	}
 
