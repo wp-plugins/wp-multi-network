@@ -241,6 +241,44 @@ class WPMN_Admin {
 	function add_network_page() {
 		global $wpdb;
 
+		if( isset( $_POST['add'] ) && isset( $_POST['domain'] ) && isset( $_POST['path'] ) ) {
+
+			/** grab custom options to clone if set */
+			if( isset( $_POST['options_to_clone'] ) && is_array( $_POST['options_to_clone'] ) ) {
+				$options_to_clone = array_keys( $_POST['options_to_clone'] );
+			}
+
+			$result = add_network(
+				$_POST['domain'],
+				$_POST['path'],
+				( isset($_POST['newSite'] ) ? $_POST['newSite'] : __( 'New Network Created' ) ) ,
+				( isset($_POST['cloneNetwork'] ) ? $_POST['cloneNetwork'] : NULL ),
+				$options_to_clone 
+			);
+			
+			if( ! is_wp_error( $result ) ) {
+				
+				if( isset( $_POST['name'] ) ) {
+					
+					switch_to_network( $result );
+					add_site_option( 'site_name', $_POST['name'] );
+					restore_current_network();
+					
+				}
+
+				$_GET['added'] = 'yes';
+				$_GET['action'] = 'saved';
+				
+			} else {
+				
+				// TODO: report error
+				
+			}
+			
+			return;
+
+		}
+
 		// Strip off URL parameters
 		$query_str = remove_query_arg( array(
 			'action', 'id', 'updated', 'deleted'
@@ -622,7 +660,7 @@ class WPMN_Admin {
 		if ( isset( $_POST['delete'] ) && isset( $_GET['id'] ) ) {
 			$result = delete_network( (int) $_GET['id'], ( isset( $_POST['override'] ) ) );
 
-			if ( is_a( $result, 'WP_Error' ) )
+			if ( is_wp_error( $result ) )
 				wp_die( $result->get_error_message() );
 
 			$_GET['deleted'] = 'yes';
