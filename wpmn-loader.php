@@ -94,7 +94,6 @@ class WPMN_Loader {
 	 */
 	private function includes() {
 		require( $this->plugin_dir . 'wpmn-functions.php'  );
-		//require( $this->plugin_dir . 'wpmn-deprecated.php' );
 
 		if ( is_network_admin() || is_admin() ) {
 			require( $this->plugin_dir . 'wpmn-admin.php' );
@@ -112,5 +111,3 @@ function setup_multi_network() {
 	new WPMN_Loader();
 }
 add_action( 'plugins_loaded', 'setup_multi_network' );
-
-?>

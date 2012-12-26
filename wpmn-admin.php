@@ -111,11 +111,11 @@ class WPMN_Admin {
 	}
 
 	function network_admin_menu() {
-		$page = add_menu_page( __( 'Networks' ), __( 'Networks' ), 'manage_options', 'networks', array( &$this, 'networks_page' ), '', -1 );
+		$page = add_menu_page( __( 'Networks' ), __( 'Networks' ), 'manage_options', 'networks', array( &$this, 'networks_page' ), 'div', -1 );
 		add_submenu_page( 'networks', __( 'All Networks' ), __( 'All Networks' ), 'manage_options', 'networks',        array( &$this, 'networks_page' ) );
 		add_submenu_page( 'networks', __( 'Add New'      ), __( 'Add New'      ), 'manage_options', 'add-new-network', array( &$this, 'add_network_page' ) );
 
-//		add_submenu_page( 'settings.php', __('Networks Settings'), __('Networks Settings'), 'manage_network_options', 'networks-settings', array( &$this, 'networks_settings_page' ) );
+		add_submenu_page( 'settings.php', __('Networks Settings'), __('Networks Settings'), 'manage_network_options', 'networks-settings', array( &$this, 'networks_settings_page' ) );
 
 		require dirname(__FILE__) . '/includes/class-wp-ms-networks-list-table.php';
 		add_filter( 'manage_' . $page . '-network' . '_columns', array( new WP_MS_Networks_List_Table(), 'get_columns' ), 0 );
