@@ -105,7 +105,7 @@ class WPMN_Admin {
 	}
 
 	function admin_menu() {
-		if( user_has_networks() ) {
+		if ( user_has_networks() ) {
 			add_dashboard_page( __('My Networks'), __('My Networks'), 'manage_options', 'my-networks', array( &$this, 'my_networks_page' ) );
 		}
 	}

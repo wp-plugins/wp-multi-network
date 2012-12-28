@@ -483,37 +483,47 @@ function network_options_to_copy() {
  * @since 1.3
  * @return array | FALSE
  */
-function user_has_networks( $user_id = null ) {
+function user_has_networks( $user_id = 0 ) {
 	global $wpdb;
 
-	if( empty( $user_id ) ) {
-
+	// Use current user
+	if ( empty( $user_id ) ) {
 		global $current_user;
 
-		$user_id = $current_user->ID;
+		$user_id    = $current_user->ID;
 		$user_login = $current_user->user_login;
 
+	// Use passed user ID
 	} else {
-
-		$user_id = (int)$user_id;
-		$user_info = get_userdata( $user_id );
+		$user_id    = (int) $user_id;
+		$user_info  = get_userdata( $user_id );
 		$user_login = $user_info->user_login;
-
 	}
 
-	$my_networks = array();
-	$network_admin_records = $wpdb->get_results( $wpdb->prepare( "SELECT site_id, meta_value FROM {$wpdb->sitemeta} WHERE meta_key = %s", 'site_admins' ) );
-	foreach( $network_admin_records as $network ) {
-		$admins = maybe_unserialize( $network->meta_value );
-		if( in_array( $user_login, $admins ) ) {
-			$my_networks[] = (int)$network->site_id;
+	// If multisite, get some site meta
+	if ( is_multisite() ) {
+
+		// Get the network admins
+		$network_admin_records = $wpdb->get_results( $wpdb->prepare( "SELECT site_id, meta_value FROM {$wpdb->sitemeta} WHERE meta_key = %s", 'site_admins' ) );
+
+		// Setup the networks array
+		$my_networks = array();
+
+		foreach( (array) $network_admin_records as $network ) {
+			$admins = maybe_unserialize( $network->meta_value );
+			if ( in_array( $user_login, $admins ) ) {
+				$my_networks[] = (int) $network->site_id;
+			}
 		}
+
+	// If not multisite, use existing site
+	} else {
+		$my_networks = array();
 	}
 
-	$my_networks = apply_filters( 'networks_user_is_network_admin', $my_networks, $user_id );
+	// If there are no networks, return false
+	if ( empty( $my_networks ) )
+		$my_networks = false;
 
-	if ( ! empty( $my_networks ) )
-		return $my_networks;
-
-	return false;
+	return apply_filters( 'networks_user_is_network_admin', $my_networks, $user_id );
 }
