@@ -225,12 +225,12 @@ class WPMN_Admin {
 			} ?>
 			</h2>
 
-			<form action="" method="get" id="domain-search">
+			<form action="<?php echo $this->admin_url() ?>&amp;action=domains" method="post" id="domain-search">
 				<?php $wp_list_table->search_box( __( 'Search Networks' ), 'networks' ); ?>
 				<input type="hidden" name="action" value="domains" />
 			</form>
 
-			<form id="form-domain-list" action="admin.php?action=domains" method="post">
+			<form id="form-domain-list" action="<?php echo $this->admin_url() ?>&amp;action=domains" method="post">
 				<?php $wp_list_table->display(); ?>
 			</form>
 		</div>
@@ -807,7 +807,19 @@ class WPMN_Admin {
 	 * Admin page for users who are network admins on another network, but possibly not the current one
 	 */
 	function my_networks_page() {
-
+		?>
+		<div class="wrap">
+			<div class="icon32" id="icon-index"><br></div>
+			<h2>My Networks</h2>
+			
+			<?php
+			
+//			$my_networks = user_has_networks();
+//			print_r($my_networks);
+			
+			?>
+		</div>
+		<?php
 	}
 
 	/**

@@ -30,13 +30,15 @@ class WP_MS_Networks_List_Table extends WP_List_Table {
 		$pagenum           = $this->get_pagenum();
 		$search_conditions = isset( $_REQUEST['s'] ) ? stripslashes( trim( $_REQUEST[ 's' ] ) ) : '';
 
-		if ( false !== strpos( $s, '*' ) ) {
+		if ( false !== strpos( $search_conditions, '*' ) ) {
 			$wild              = '%';
-			$search_conditions = trim( $s, '*' );
+			$search_conditions = trim( $search_conditions, '*' );
 		}
 
-		$like_s = esc_sql( like_escape( $s ) );
+		$like_s = esc_sql( like_escape( $search_conditions ) );
 
+		$total_query = 'SELECT COUNT( id ) FROM ' . $wpdb->site . ' ';
+		
 		$query =	"SELECT {$wpdb->site}.*, meta1.meta_value as sitename, meta2.meta_value as network_admins, COUNT({$wpdb->blogs}.blog_id) as blogs, {$wpdb->blogs}.path as blog_path, {$wpdb->blogs}.site_id as site_id
 						FROM {$wpdb->site}
 					LEFT JOIN {$wpdb->blogs}
@@ -51,17 +53,19 @@ class WP_MS_Networks_List_Table extends WP_List_Table {
 							meta2.site_id = {$wpdb->site}.id";
 		
 
-		if ( empty($s) ) {
+		if ( empty( $search_conditions ) ) {
 			// Nothing to do.
 		} else {
 
-			if ( is_numeric($s) && empty( $wild ) ) {
+			if ( is_numeric($search_conditions) && empty( $wild ) ) {
 				$query .= " WHERE ( {$wpdb->site}.site_id = '{$like_s}' )";
+				$total_query .= " WHERE ( {$wpdb->site}.id = {$like_s} )";
 				
-			} elseif ( is_subdomain_install() ) {				
+			} elseif ( is_subdomain_install() ) {
 				$blog_s = str_replace( '.' . $current_site->domain, '', $like_s );
 				$blog_s .= $wild . '.' . $current_site->domain;
 				$query .= " WHERE ( {$wpdb->site}.domain LIKE '$blog_s' ) ";
+				$total_query .= " WHERE ( {$wpdb->site}.domain LIKE '$blog_s' ) ";
 				
 			} else {
 
@@ -71,11 +75,13 @@ class WP_MS_Networks_List_Table extends WP_List_Table {
 					$blog_s = $like_s;
 				}
 
-				$query .= " WHERE  ( {$wpdb->site}.path LIKE '$blog_s' )";				
+				$query .= " WHERE  ( {$wpdb->site}.path LIKE '$blog_s' )";
+				$total_query .= " WHERE  ( {$wpdb->site}.path LIKE '$blog_s' )";
 			}
 		}
 
-		$total    = $wpdb->get_var( str_replace( 'SELECT *', 'SELECT COUNT( site_id )', $query ) );
+		$total = $wpdb->get_var( $total_query );
+		
 		$query   .= " GROUP BY {$wpdb->site}.id";
 		$order_by = isset( $_REQUEST['orderby'] ) ? $_REQUEST['orderby'] : '';
 
