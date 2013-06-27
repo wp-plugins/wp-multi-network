@@ -55,8 +55,10 @@ function network_exists( $site_id ) {
  * @param integer $new_network ID of network to manipulate
  */
 function switch_to_network( $new_network = 0, $validate = false ) {
+	echo('someone asked me to switch networks');
 	global $old_network_details, $wpdb, $site_id, $switched_network, $switched_network_stack, $current_site, $sites;
 
+	add_action('switch_network', 'switch_network', 10, 3);
 	if ( empty( $new_network ) )
 		$new_network = $site_id;
 
@@ -98,10 +100,19 @@ function switch_to_network( $new_network = 0, $validate = false ) {
 	$prev_site_id            = $site_id;
 	$site_id                 = $new_network;
 
-	do_action( 'switch_network', $site_id, $prev_site_id );
+	do_action( 'switch_network', $site_id, $prev_site_id, $current_site);
 	$switched_network = true;
 
 	return true;
+}
+
+function switch_network($new_site, $old_site, $site)
+{
+	echo 'omg someone called me';
+	define('DOMAIN_CURRENT_SITE', $site->domain);
+	define('PATH_CURRENT_SITE', $site->path);
+	define('SITE_ID_CURRENT_SITE', $site->id);
+	define('BLOG_ID_CURRENT_SITE', 10);
 }
 
 /**

@@ -15,17 +15,47 @@ if ( !defined( 'ABSPATH' ) ) exit;
  *
  * @since 1.3
  */
-class WPMN_Admin {
+function add_items($admin_bar)
+{
+	global $wpdb;
+	
+	$args = array(
+		'id'    => 'network-jump',
+		'title' => 'Network Jump',
+		'href'  => '#',
+		'meta'  => array('title' => __('Jump to another network'))
+	);
+	
+	$admin_bar->add_menu($args);
+	
+	$network_list = $wpdb->get_results("SELECT site.id AS id, CONCAT('http://', site.domain, site.path, 'wp-admin/network/') AS address, meta.meta_value AS site_name FROM " . $wpdb->site . " AS site LEFT JOIN wp_sitemeta AS meta ON (meta.site_id = site.id AND meta.meta_key = 'site_name')", ARRAY_A );
+	foreach ($network_list as $network)
+	{
+		$args = array(
+			'id'    => 'network-jump-' . $network['id'],
+			'title' => $network['site_name'],
+			'href'  => $network['address'],
+			'parent' => 'network-jump',
+			'meta'  => array('title' => __($network['site_name']))
+		);
+		
+		$admin_bar->add_menu($args);
+	}
+}
 
+class WPMN_Admin {
 	function __construct() {
 		add_action( 'admin_head',         array( &$this, 'admin_head'         ) );
 		add_action( 'admin_menu',		  array( &$this, 'admin_menu'		  ) );
 		add_action( 'network_admin_menu', array( &$this, 'network_admin_menu' ) );
-
+		add_action('admin_bar_menu', 'add_items',  100);
+		
 		add_filter( 'manage_sites_action_links', array( &$this, 'add_move_blog_link' ), 10, 3 );
 		if( ! has_action( 'manage_sites_action_links' ) ) {
 			add_action( 'wpmublogsaction',    array( &$this, 'assign_blogs_link'  ) );
 		}
+		
+		
 	}
 
 	function admin_url() {
@@ -270,7 +300,8 @@ class WPMN_Admin {
 				$_GET['action'] = 'saved';
 				
 			} else {
-				
+				var_dump($result);
+				var_dump($result);
 				// TODO: report error
 				
 			}
