@@ -28,11 +28,18 @@ class WPMN_Admin {
 		}
 	}
 
+	/**
+	 * Return the URL of the Networks page
+	 * @return string Absolute URL to Networks page
+	 */
 	function admin_url() {
 		$result = add_query_arg( array( 'page' => 'networks' ), esc_url( network_admin_url( 'admin.php' ) ) );
 		return $result;
 	}
 
+	/**
+	 * Add JS code for Assign Sites function to admin head
+	 */
 	function admin_head() {
 	?>
 
@@ -104,18 +111,25 @@ class WPMN_Admin {
 		echo '<a href="' . $url . '" class="edit">' . __( 'Move' ) . '</a>';
 	}
 
+	/**
+	 * Add the My Networks page to the site-level dashboard
+	 */
 	function admin_menu() {
 		if ( user_has_networks() ) {
-			add_dashboard_page( __('My Networks'), __('My Networks'), 'manage_options', 'my-networks', array( &$this, 'my_networks_page' ) );
+			// If the user is super admin on another Network, don't require elevated permissions on the current Site
+			add_dashboard_page( __('My Networks'), __('My Networks'), 'read', 'my-networks', array( &$this, 'my_networks_page' ) );
 		}
 	}
 
+	/**
+	 * Add Networks menu and entries to the Network-level dashboard
+	 */
 	function network_admin_menu() {
 		$page = add_menu_page( __( 'Networks' ), __( 'Networks' ), 'manage_options', 'networks', array( &$this, 'networks_page' ), 'div', -1 );
 		add_submenu_page( 'networks', __( 'All Networks' ), __( 'All Networks' ), 'manage_options', 'networks',        array( &$this, 'networks_page' ) );
 		add_submenu_page( 'networks', __( 'Add New'      ), __( 'Add New'      ), 'manage_options', 'add-new-network', array( &$this, 'add_network_page' ) );
 
-		add_submenu_page( 'settings.php', __('Networks Settings'), __('Networks Settings'), 'manage_network_options', 'networks-settings', array( &$this, 'networks_settings_page' ) );
+//		add_submenu_page( 'settings.php', __('Networks Settings'), __('Networks Settings'), 'manage_network_options', 'networks-settings', array( &$this, 'networks_settings_page' ) );
 
 		require dirname(__FILE__) . '/includes/class-wp-ms-networks-list-table.php';
 		add_filter( 'manage_' . $page . '-network' . '_columns', array( new WP_MS_Networks_List_Table(), 'get_columns' ), 0 );
@@ -138,13 +152,21 @@ class WPMN_Admin {
 
 			<div id="message" class="updated fade"><p><?php _e( 'Network(s) deleted.' ); ?></p></div>
 
+		<?php elseif ( isset( $_GET['moved'] ) ) : ?>
+
+			<div id="message" class="updated fade"><p><?php _e( 'Site(s) moved.' ); ?></p></div>
+
 		<?php endif;
 
 	}
 
+	/**
+	 * Main Network-level dashboard page
+	 * 	Network listing and editing functions are routed through this function
+	 */
 	function networks_page() {
 
-		if ( !is_super_admin() )
+		if ( ! is_super_admin() )
 			wp_die( __( 'You do not have permission to access this page.' ) );
 
 		if ( isset( $_POST['update'] ) && isset( $_GET['id'] ) )
@@ -157,7 +179,7 @@ class WPMN_Admin {
 			$this->delete_multiple_network_page();
 
 		if ( isset( $_POST['add'] ) && isset( $_POST['domain'] ) && isset( $_POST['path'] ) )
-			$this->add_network_page();
+			$this->add_network_handler();
 
 		if ( isset( $_POST['move'] ) && isset( $_GET['blog_id'] ) )
 			$this->move_site_page();
@@ -206,6 +228,10 @@ class WPMN_Admin {
 		<?php
 	}
 
+	/**
+	 * Network listing dashboard page
+	 * @uses WP_MS_Networks_List_Table List_Table iterator for networks
+	 */
 	function all_networks() {
 		$wp_list_table = new WP_MS_Networks_List_Table();
 		$wp_list_table->prepare_items(); ?>
@@ -238,46 +264,10 @@ class WPMN_Admin {
 		<?php
 	}
 
+	/**
+	 * New network creation dashboard page
+	 */
 	function add_network_page() {
-		global $wpdb;
-
-		if( isset( $_POST['add'] ) && isset( $_POST['domain'] ) && isset( $_POST['path'] ) ) {
-
-			/** grab custom options to clone if set */
-			if( isset( $_POST['options_to_clone'] ) && is_array( $_POST['options_to_clone'] ) ) {
-				$options_to_clone = array_keys( $_POST['options_to_clone'] );
-			}
-
-			$result = add_network(
-				$_POST['domain'],
-				$_POST['path'],
-				( isset($_POST['newSite'] ) ? $_POST['newSite'] : __( 'New Network Created' ) ) ,
-				( isset($_POST['cloneNetwork'] ) ? $_POST['cloneNetwork'] : NULL ),
-				$options_to_clone 
-			);
-			
-			if( ! is_wp_error( $result ) ) {
-				
-				if( isset( $_POST['name'] ) ) {
-					
-					switch_to_network( $result );
-					add_site_option( 'site_name', $_POST['name'] );
-					restore_current_network();
-					
-				}
-
-				$_GET['added'] = 'yes';
-				$_GET['action'] = 'saved';
-				
-			} else {
-				
-				// TODO: report error
-				
-			}
-			
-			return;
-
-		}
 
 		// Strip off URL parameters
 		$query_str = remove_query_arg( array(
@@ -290,70 +280,15 @@ class WPMN_Admin {
 
 			<div id="col-container">
 				<p><?php _e( 'A site will be created at the root of the new network' ); ?>.</p>
-				<form method="POST" action="<?php echo add_query_arg( array( 'action' => 'addnetwork' ), $query_str ); ?>">
+				<form method="POST" action="<?php echo $this->admin_url(); ?>">
 					<table class="form-table">
 						<tr><th scope="row"><label for="newName"><?php _e( 'Network Name' ); ?>:</label></th><td><input type="text" name="name" id="newName" title="<?php _e( 'A friendly name for your new network' ); ?>" /></td></tr>
 						<tr><th scope="row"><label for="newDom"><?php  _e( 'Domain' ); ?>:</label></th><td> http://<input type="text" name="domain" id="newDom" title="<?php _e( 'The domain for your new network' ); ?>" /></td></tr>
 						<tr><th scope="row"><label for="newPath"><?php _e( 'Path' ); ?>:</label></th><td><input type="text" name="path" id="newPath" title="<?php _e( 'If you are unsure, put in /' ); ?>" /></td></tr>
 						<tr><th scope="row"><label for="newSite"><?php _e( 'Site Name' ); ?>:</label></th><td><input type="text" name="newSite" id="newSite" title="<?php _e( 'The name for the new network\'s site.' ); ?>" /></td></tr>
 					</table>
-					<div class="metabox-holder meta-box-sortables" id="advanced_network_options">
-						<div class="postbox if-js-closed">
-							<div title="Click to toggle" class="handlediv"><br/></div>
-							<h3><span><?php _e( 'Clone Network Options' ); ?></span></h3>
-							<div class="inside">
-								<table class="form-table">
-									<tr>
-										<th scope="row"><label for="cloneNetwork"><?php _e( 'Clone Network' ); ?>:</label></th>
-											<?php $network_list = $wpdb->get_results( 'SELECT id, domain FROM ' . $wpdb->site, ARRAY_A ); ?>
-										<td colspan="2">
-											<select name="cloneNetwork" id="cloneNetwork">
-												<option value="0"><?php _e( 'Do Not Clone' ); ?></option>
-												<?php foreach ( $network_list as $network ) { ?>
-												<option value="<?php echo $network['id'] ?>" <?php selected( $network['id'] ) ?>><?php echo $network['domain'] ?></option>
-												<?php } ?>
-											</select>
-										</td>
-									</tr>
-									<tr>
-										<?php
-											$class                     = '';
-											$all_network_options       = $wpdb->get_results( 'SELECT DISTINCT meta_key FROM ' . $wpdb->sitemeta );
-											$known_networkmeta_options = network_options_to_copy();
-											$known_networkmeta_options = apply_filters( 'manage_sitemeta_descriptions', $known_networkmeta_options );
-										?>
 
-										<td colspan="3">
-											<table class="widefat">
-												<thead>
-													<tr>
-														<th scope="col" class="check-column"></th>
-														<th scope="col"><?php _e( 'Meta Value' ); ?></th>
-														<th scope="col"><?php _e( 'Description' ); ?></th>
-													</tr>
-												</thead>
-												<tbody>
-
-													<?php foreach ( $all_network_options as $count => $option ) { ?>
-
-														<tr class="<?php echo $class = ('alternate' == $class) ? '' : 'alternate'; ?>">
-															<th scope="row" class="check-column"><input type="checkbox" id="option_<?php echo $count; ?>" name="options_to_clone[<?php echo $option->meta_key; ?>]"<?php echo (array_key_exists( $option->meta_key, network_options_to_copy() ) ? ' checked' : '' ); ?> /></th>
-															<td><label for="option_<?php echo $count; ?>"><?php echo $option->meta_key; ?></label></td>
-															<td><label for="option_<?php echo $count; ?>"><?php echo (array_key_exists( $option->meta_key, $known_networkmeta_options ) ? __( $known_networkmeta_options[$option->meta_key] ) : '' ); ?></label></td>
-														</tr>
-
-													<?php } ?>
-
-												</tbody>
-											</table>
-										</td>
-									</tr>
-								</table>
-							</div>
-						</div>
-					</div>
-
-					<input type="submit" class="button" name="add" value="<?php _e( 'Create Network' ); ?>" />
+					<?php submit_button( __( 'Create Network', '' ), 'primary', 'add' ); ?>
 
 				</form>
 			</div>
@@ -362,13 +297,16 @@ class WPMN_Admin {
 		<?php
 	}
 
+	/**
+	 * Dashbaord screen for moving sites -- accessed from the "Sites" screen
+	 */
 	function move_site_page() {
 		global $wpdb;
 
 		if ( isset( $_POST['move'] ) && isset( $_GET['blog_id'] ) ) {
 			if ( isset( $_POST['from'] ) && isset( $_POST['to'] ) ) {
 				move_site( $_GET['blog_id'], $_POST['to'] );
-				$_GET['updated'] = 'yes';
+				$_GET['moved'] = 'yes';
 				$_GET['action']  = 'saved';
 			}
 		} else {
@@ -459,7 +397,7 @@ class WPMN_Admin {
 				/** Javascript disabled for client - check the 'from' box */
 			} else {
 				if ( !isset( $_POST['from'] ) )
-					die( __( 'No blogs seleceted.' ) );
+					die( __( 'No blogs selected.' ) );
 
 				$sites = $_POST['from'];
 			}
@@ -479,7 +417,7 @@ class WPMN_Admin {
 				}
 			}
 
-			$_GET['updated'] = 'yes';
+			$_GET['moved'] = 'yes';
 			$_GET['action'] = 'saved';
 		} else {
 
@@ -505,13 +443,13 @@ class WPMN_Admin {
 
 			?>
 			<div class="wrap">
-				<?php screen_icon( 'ms-admin' ); ?>
-				<h2><?php _e( 'Networks' ) ?></h2>
-				<h3><?php _e( 'Assign Sites to' ); ?>: http://<?php echo $network->domain . $network->path ?></h3>
-				<noscript>
-				<div id="message" class="updated"><p><?php _e( 'Select the blogs you want to assign to this network from the column at left, and click "Update Assignments."' ); ?></p></div>
-				</noscript>
-				<form method="post" action="<?php echo $_SERVER['REQUEST_URI']; ?>">
+				<form method="post" id="site-assign-form" action="<?php echo $_SERVER['REQUEST_URI']; ?>">
+					<?php screen_icon( 'ms-admin' ); ?>
+					<h2><?php _e( 'Networks' ) ?></h2>
+					<h3><?php _e( 'Assign Sites to' ); ?>: http://<?php echo $network->domain . $network->path ?></h3>
+					<noscript>
+						<div id="message" class="updated"><p><?php _e( 'Select the blogs you want to assign to this network from the column at left, and click "Update Assignments."' ); ?></p></div>
+					</noscript>
 					<table class="widefat">
 						<thead>
 							<tr>
@@ -576,8 +514,11 @@ class WPMN_Admin {
 		}
 	}
 
+	/**
+	 * 
+	 */
 	function add_network_handler() {
-		global $wpdb;
+		global $wpdb, $current_site;
 
 		if ( isset( $_POST['add'] ) && isset( $_POST['domain'] ) && isset( $_POST['path'] ) ) {
 
@@ -585,14 +526,17 @@ class WPMN_Admin {
 			if ( isset( $_POST['options_to_clone'] ) && is_array( $_POST['options_to_clone'] ) )
 				$options_to_clone = array_keys( $_POST['options_to_clone'] );
 			else
-				$options_to_clone = network_options_to_copy();
+				$options_to_clone = array_keys( network_options_to_copy() );
 
 			$result = add_network(
-				$_POST['domain'], $_POST['path'], ( isset( $_POST['newSite'] ) ? $_POST['newSite'] : __( 'New Network Created' ) ), ( isset( $_POST['cloneNetwork'] ) ? $_POST['cloneNetwork'] : NULL ), $options_to_clone
+				$_POST['domain'], $_POST['path'], 
+				( isset( $_POST['newSite'] ) ? $_POST['newSite'] : __( 'New Network Created' ) ), 
+				( isset( $_POST['cloneNetwork'] ) ? $_POST['cloneNetwork'] : $current_site->id ), 
+				$options_to_clone
 			);
 
 			if ( $result && !is_wp_error( $result ) ) {
-				if ( isset( $_POST['name'] ) ) {
+				if ( ! empty( $_POST['name'] ) ) {
 					switch_to_network( $result );
 					add_site_option( 'site_name', $_POST['name'] );
 					restore_current_network();
@@ -645,7 +589,7 @@ class WPMN_Admin {
 					<?php endif; ?>
 					<p>
 						<input type="hidden" name="networkId" value="<?php echo $network->id; ?>" />
-						<input class="button" type="submit" name="update" value="<?php _e( 'Update Network' ); ?>" />
+						<?php submit_button( __('Update Network'), 'primary', 'update', false ); ?>
 						<a href="<?php echo $this->admin_url(); ?>"><?php _e( 'Cancel' ); ?></a>
 					</p>
 				</form>
@@ -675,36 +619,37 @@ class WPMN_Admin {
 
 			$sites = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$wpdb->blogs} WHERE site_id = %d", (int) $_GET['id'] ) ); ?>
 
-			<div class="wrap">
+			<form method="POST" action="<?php echo remove_query_arg( 'action' ); ?>">
 				<?php screen_icon( 'ms-admin' ); ?>
 				<h2><?php _e( 'Networks' ) ?></h2>
 				<h3><?php _e( 'Delete Network' ); ?>: <?php echo $network->domain . $network->path; ?></h3>
-				<form method="POST" action="<?php echo remove_query_arg( 'action' ); ?>">
+				<div>
 					<?php
 					if ( $sites ) {
 						if ( RESCUE_ORPHANED_BLOGS && ENABLE_NETWORK_ZERO ) {
 
 							?>
-									<div id="message" class="error">
-										<p><?php _e( 'There are blogs associated with this network. ' );
+							<div id="message" class="error">
+								<p><?php _e( 'There are blogs associated with this network. ' );
 							_e( 'Deleting it will move them to the holding network.' ); ?></p>
-										<p><label for="override"><?php _e( 'If you still want to delete this network, check the following box' ); ?>:</label> <input type="checkbox" name="override" id="override" /></p>
-									</div>
+								<p><label for="override"><?php _e( 'If you still want to delete this network, check the following box' ); ?>:</label> <input type="checkbox" name="override" id="override" /></p>
+							</div>
 							<?php } else { ?>
-									<div id="message" class="error">
-										<p><?php _e( 'There are blogs associated with this network. ' );
+							<div id="message" class="error">
+								<p><?php _e( 'There are blogs associated with this network. ' );
 							_e( 'Deleting it will delete those blogs as well.' ); ?></p>
-										<p><label for="override"><?php _e( 'If you still want to delete this network, check the following box' ); ?>:</label> <input type="checkbox" name="override" id="override" /></p>
-									</div>
+								<p><label for="override"><?php _e( 'If you still want to delete this network, check the following box' ); ?>:</label> <input type="checkbox" name="override" id="override" /></p>
+							</div>
 							<?php
 						}
 					}
 
 					?>
 					<p><?php _e( 'Are you sure you want to delete this network?' ); ?></p>
-					<input type="submit" name="delete" value="<?php _e( 'Delete Network' ); ?>" class="button" /> <a href="<?php echo $this->admin_url(); ?>"><?php _e( 'Cancel' ); ?></a>
-				</form>
-			</div>
+					<?php submit_button( __( 'Delete Network', '' ), 'primary', 'delete', false ) ?> 
+					<a href="<?php echo $this->admin_url(); ?>"><?php _e( 'Cancel' ); ?></a>
+				</div>
+			</form>
 			<?php
 		}
 	}
@@ -807,6 +752,9 @@ class WPMN_Admin {
 	 * Admin page for users who are network admins on another network, but possibly not the current one
 	 */
 	function my_networks_page() {
+
+		global $wpdb;
+
 		?>
 		<div class="wrap">
 			<div class="icon32" id="icon-index"><br></div>
@@ -814,10 +762,51 @@ class WPMN_Admin {
 			
 			<?php
 			
-//			$my_networks = user_has_networks();
-//			print_r($my_networks);
+			$my_networks = user_has_networks();
+			foreach( $my_networks as $key => $network_id ) {
+				$my_networks[$key] = $wpdb->get_row( $wpdb->prepare(
+					'SELECT s.*, sm.meta_value as site_name, b.blog_id FROM ' . $wpdb->site . ' s LEFT JOIN ' . $wpdb->sitemeta . ' as sm ON sm.site_id = s.id AND sm.meta_key = %s LEFT JOIN ' . $wpdb->blogs . ' b ON s.id = b.site_id WHERE s.id = %d',
+					'site_name',
+					$network_id
+				) );
+			}
+			
+			// Shameless copy of My Sites
 			
 			?>
+			<table class="widefat fixed">
+			<?php
+			$num = count( $my_networks );
+			$cols = 1;
+			if ( $num >= 20 )
+				$cols = 4;
+			elseif ( $num >= 10 )
+				$cols = 2;
+			$num_rows = ceil( $num / $cols );
+			$split = 0;
+			for ( $i = 1; $i <= $num_rows; $i++ ) {
+				$rows[] = array_slice( $my_networks, $split, $cols );
+				$split = $split + $cols;
+			}
+		
+			$c = '';
+			foreach ( $rows as $row ) {
+				$c = $c == 'alternate' ? '' : 'alternate';
+				echo "<tr class='$c'>";
+				$i = 0;
+				foreach ( $row as $network ) {
+					$s = $i == 3 ? '' : 'border-right: 1px solid #ccc;';
+					?>
+					<td valign='top' style= <?php echo $s ?>>
+						<h3><?php echo $network->site_name ?></h3>
+						<p><?php echo apply_filters( 'mynetworks_network_actions', "<a href='" . esc_url( get_home_url( $network->blog_id ) ). "'>" . __( 'Visit' ) . "</a> | <a href='" . esc_url( get_admin_url( $network->blog_id, '/network/' ) ) . "'>" . __( 'Dashboard' ) . "</a>", $network ); ?></p>
+					</td>
+					<?php
+					$i++;
+				}
+				echo "</tr>";
+			}?>
+			</table>
 		</div>
 		<?php
 	}
