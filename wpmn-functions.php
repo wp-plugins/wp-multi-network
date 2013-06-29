@@ -265,13 +265,13 @@ function update_network( $id, $domain, $path = '' ) {
 		return new WP_Error( 'network_not_updated', __( 'Network could not be updated.' ) );
 
 	$path      = !empty( $path ) ? $path : $network->path;
-	$full_path = $domain . $path;
-	$old_path  = $network->domain . $network->path;
+	$full_path = untrailingslashit( $domain . $path );
+	$old_path  = untrailingslashit( $network->domain . $network->path );
 
 	// Also update any associated blogs
 	$sites = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$wpdb->blogs} WHERE site_id = %d", $id ) );
 
-	if ( !empty( $sites ) ) {
+	if ( ! empty( $sites ) ) {
 
 		// Loop through sites and update domain/path
 		foreach ( $sites as $site ) {
@@ -288,7 +288,7 @@ function update_network( $id, $domain, $path = '' ) {
 
 			// Loop through options and correct a few of them
 			foreach ( network_options_list() as $option_name ) {
-				$option_value = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$option_table} WHERE option_name = %s'", $option_name ) );
+				$option_value = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$option_table} WHERE option_name = %s", $option_name ) );
 				if ( !empty( $option_value ) ) {
 					$new_value = str_replace( $old_path, $full_path, $option_value->option_value );
 					update_blog_option( $site->blog_id, $option_name, $new_value );
@@ -443,7 +443,7 @@ function move_site( $site_id, $new_network_id ) {
 }
 
 /**
- * Return list of frequently used options
+ * Return list of URL-dependent options
  *
  * @since 1.3
  * @return array
