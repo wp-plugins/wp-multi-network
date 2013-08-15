@@ -8,6 +8,7 @@
  * Refreshed by Brian Layman for WordPress 3.1
  * Refreshed by John James Jacoby for WordPress 3.3
  * Refreshed by John James Jacoby for WordPress 3.5
+ * Refreshed by David Dean for WordPress 3.6
  *
  * @package WPMN
  * @subpackage Loader
@@ -17,8 +18,8 @@
  * Plugin Name: WP Multi-Network
  * Plugin URI:  http://wordpress.org/extend/plugins/wp-multi-network/
  * Description: Adds a Network Management UI for super admins in a WordPress Multisite environment
- * Version:     1.3.1
- * Author:      johnjamesjacoby, BrianLayman, ddean
+ * Version:     1.4
+ * Author:      johnjamesjacoby, ddean, BrianLayman
  * Author URI:  http://johnjamesjacoby.com
  * Tags: multi, networks, site, network, blog, domain, subdomain, path, multisite, MS
  */
@@ -54,7 +55,7 @@ class WPMN_Loader {
 
 		// Enable the holding network. Must be true to save orphaned blogs.
 		if ( !defined( 'ENABLE_NETWORK_ZERO' ) )
-			define( 'ENABLE_NETWORK_ZERO', true );
+			define( 'ENABLE_NETWORK_ZERO', false );
 
 		/**
 		 * true = Redirect blogs from deleted network to holding network
@@ -94,6 +95,7 @@ class WPMN_Loader {
 	 */
 	private function includes() {
 		require( $this->plugin_dir . 'wpmn-functions.php'  );
+		require( $this->plugin_dir . 'wpmn-actions.php'  );
 
 		if ( is_network_admin() || is_admin() ) {
 			require( $this->plugin_dir . 'wpmn-admin.php' );

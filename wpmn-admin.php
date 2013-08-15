@@ -117,7 +117,7 @@ class WPMN_Admin {
 	function admin_menu() {
 		if ( user_has_networks() ) {
 			// If the user is super admin on another Network, don't require elevated permissions on the current Site
-			add_dashboard_page( __('My Networks'), __('My Networks'), 'read', 'my-networks', array( &$this, 'my_networks_page' ) );
+			$page = add_dashboard_page( __('My Networks'), __('My Networks'), 'read', 'my-networks', array( &$this, 'my_networks_page' ) );
 		}
 	}
 
@@ -464,7 +464,7 @@ class WPMN_Admin {
 								<?php
 								foreach ( $sites as $site ) {
 									if ( $site->site_id != $network->id )
-										echo '<option value="' . $site->blog_id . '">' . $site->name . ' (' . $site->domain . ')</option>';
+										echo '<option value="' . $site->blog_id . '">' . $site->name . ' (' . $site->domain . $site->path . ')</option>';
 								}
 								?>
 								</select>
@@ -478,7 +478,7 @@ class WPMN_Admin {
 								<ul style="margin: 0; padding: 0; list-style-type: none;">
 								<?php foreach ( $sites as $site ) { ?>
 									<?php if ( $site->site_id == $network->id ) { ?>
-									<li><?php echo $site->name . ' (' . $site->domain . ')'; ?></li>
+									<li><?php echo $site->name . ' (' . $site->domain . $site->path . ')'; ?></li>
 									<?php } ?>
 								<?php } ?>
 								</ul>
@@ -488,7 +488,7 @@ class WPMN_Admin {
 									if ( ENABLE_NETWORK_ZERO ) {
 										foreach ( $sites as $site ) {
 											if ( $site->site_id == $network->id )
-												echo '<option value="' . $site->blog_id . '">' . $site->name . ' (' . $site->domain . ')</option>';
+												echo '<option value="' . $site->blog_id . '">' . $site->name . ' (' . $site->domain . $site->path . ')</option>';
 										}
 									}
 									?>
@@ -506,8 +506,8 @@ class WPMN_Admin {
 						</table>
 						<br />
 					<?php endif; ?>
-					<input type="submit" name="reassign" value="<?php _e( 'Update Assigments' ); ?>" class="button" />
-					<a href="<?php echo $this->admin_url(); ?>"><?php _e( 'Cancel' ); ?></a>
+					<?php submit_button( __( 'Update Assignments' ), 'primary', 'reassign', false ); ?>
+					<a class="button" href="<?php echo $this->admin_url(); ?>"><?php _e( 'Cancel' ); ?></a>
 				</form>
 			</div>
 			<?php
@@ -539,6 +539,7 @@ class WPMN_Admin {
 				if ( ! empty( $_POST['name'] ) ) {
 					switch_to_network( $result );
 					add_site_option( 'site_name', $_POST['name'] );
+					add_site_option( 'active_sitewide_plugins', array( 'wp-multi-network/wpmn-loader.php' => time() ) );
 					restore_current_network();
 				}
 
@@ -590,7 +591,7 @@ class WPMN_Admin {
 					<p>
 						<input type="hidden" name="networkId" value="<?php echo $network->id; ?>" />
 						<?php submit_button( __('Update Network'), 'primary', 'update', false ); ?>
-						<a href="<?php echo $this->admin_url(); ?>"><?php _e( 'Cancel' ); ?></a>
+						<a class="button" href="<?php echo $this->admin_url(); ?>"><?php _e( 'Cancel' ); ?></a>
 					</p>
 				</form>
 			</div>
@@ -647,7 +648,7 @@ class WPMN_Admin {
 					?>
 					<p><?php _e( 'Are you sure you want to delete this network?' ); ?></p>
 					<?php submit_button( __( 'Delete Network', '' ), 'primary', 'delete', false ) ?> 
-					<a href="<?php echo $this->admin_url(); ?>"><?php _e( 'Cancel' ); ?></a>
+					<a class="button" href="<?php echo $this->admin_url(); ?>"><?php _e( 'Cancel' ); ?></a>
 				</div>
 			</form>
 			<?php
@@ -753,7 +754,7 @@ class WPMN_Admin {
 	 */
 	function my_networks_page() {
 
-		global $wpdb;
+		global $wpdb, $current_user;
 
 		?>
 		<div class="wrap">
@@ -808,6 +809,7 @@ class WPMN_Admin {
 			}?>
 			</table>
 		</div>
+
 		<?php
 	}
 

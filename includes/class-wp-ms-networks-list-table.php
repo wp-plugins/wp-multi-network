@@ -24,11 +24,14 @@ class WP_MS_Networks_List_Table extends WP_List_Table {
 	function prepare_items() {
 		global $s, $mode, $wpdb, $current_site;
 
+		// TODO: include network zero when there are unassigned sites
+
 		$wild              = '';
 		$mode              = ( empty( $_REQUEST['mode'] ) ) ? 'list' : $_REQUEST['mode'];
 		$per_page          = $this->get_items_per_page( 'networks_per_page' );
 		$pagenum           = $this->get_pagenum();
 		$search_conditions = isset( $_REQUEST['s'] ) ? stripslashes( trim( $_REQUEST[ 's' ] ) ) : '';
+		$admin_user        = isset( $_REQUEST['network_admin'] ) ? stripslashes( trim( $_REQUEST[ 'network_admin' ] ) ) : '' ;
 
 		if ( false !== strpos( $search_conditions, '*' ) ) {
 			$wild              = '%';
@@ -37,7 +40,7 @@ class WP_MS_Networks_List_Table extends WP_List_Table {
 
 		$like_s = esc_sql( like_escape( $search_conditions ) );
 
-		$total_query = 'SELECT COUNT( id ) FROM ' . $wpdb->site . ' ';
+		$total_query = 'SELECT COUNT( id ) FROM ' . $wpdb->site . ' WHERE 1=1 ';
 		
 		$query =	"SELECT {$wpdb->site}.*, meta1.meta_value as sitename, meta2.meta_value as network_admins, COUNT({$wpdb->blogs}.blog_id) as blogs, {$wpdb->blogs}.path as blog_path, {$wpdb->blogs}.site_id as site_id
 						FROM {$wpdb->site}
@@ -50,7 +53,8 @@ class WP_MS_Networks_List_Table extends WP_List_Table {
 					LEFT JOIN {$wpdb->sitemeta} meta2 
 						ON
 							meta2.meta_key = 'site_admins' AND
-							meta2.site_id = {$wpdb->site}.id";
+							meta2.site_id = {$wpdb->site}.id
+					WHERE 1=1 ";
 		
 
 		if ( empty( $search_conditions ) ) {
@@ -58,14 +62,14 @@ class WP_MS_Networks_List_Table extends WP_List_Table {
 		} else {
 
 			if ( is_numeric($search_conditions) && empty( $wild ) ) {
-				$query .= " WHERE ( {$wpdb->site}.site_id = '{$like_s}' )";
-				$total_query .= " WHERE ( {$wpdb->site}.id = {$like_s} )";
+				$query .= " AND ( {$wpdb->site}.site_id = '{$like_s}' )";
+				$total_query .= " AND ( {$wpdb->site}.id = {$like_s} )";
 				
 			} elseif ( is_subdomain_install() ) {
 				$blog_s = str_replace( '.' . $current_site->domain, '', $like_s );
 				$blog_s .= $wild . '.' . $current_site->domain;
-				$query .= " WHERE ( {$wpdb->site}.domain LIKE '$blog_s' ) ";
-				$total_query .= " WHERE ( {$wpdb->site}.domain LIKE '$blog_s' ) ";
+				$query .= " AND ( {$wpdb->site}.domain LIKE '$blog_s' ) ";
+				$total_query .= " AND ( {$wpdb->site}.domain LIKE '$blog_s' ) ";
 				
 			} else {
 
@@ -79,7 +83,12 @@ class WP_MS_Networks_List_Table extends WP_List_Table {
 				$total_query .= " WHERE  ( {$wpdb->site}.path LIKE '$blog_s' )";
 			}
 		}
-
+		
+		if( ! empty( $admin_user ) ) {
+			$query .= ' AND meta2.meta_value LIKE "%' . $admin_user . '%"';
+			// TODO: Fix total query
+		}
+		
 		$total = $wpdb->get_var( $total_query );
 		
 		$query   .= " GROUP BY {$wpdb->site}.id";

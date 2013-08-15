@@ -85,6 +85,7 @@ function switch_to_network( $new_network = 0, $validate = false ) {
 	$old_network_details['domain']    = $current_site->domain;
 	$old_network_details['path']      = $current_site->path;
 	$old_network_details['site_name'] = $current_site->site_name;
+	$old_network_details['blog_id']   = $current_site->blog_id;
 
 	foreach ( $sites as $network ) {
 		if ( $network->id == $new_network ) {
@@ -95,6 +96,15 @@ function switch_to_network( $new_network = 0, $validate = false ) {
 
 	$wpdb->siteid            = $new_network;
 	$current_site->site_name = get_site_option( 'site_name' );
+	$current_site->blog_id   = $wpdb->get_var( 
+		$wpdb->prepare( 
+			'SELECT blog_id FROM ' . $wpdb->blogs . ' WHERE site_id=%d AND domain=%s AND path=%s',
+			$new_network,
+			$current_site->domain,
+			$current_site->path
+		)
+	);
+
 	$prev_site_id            = $site_id;
 	$site_id                 = $new_network;
 
@@ -132,6 +142,7 @@ function restore_current_network() {
 	$current_site->domain    = $old_network_details['domain'];
 	$current_site->path      = $old_network_details['path'];
 	$current_site->site_name = $old_network_details['site_name'];
+	$current_site->blog_id   = $old_network_details['blog_id'];
 
 	unset( $old_network_details );
 
@@ -190,12 +201,68 @@ function add_network( $domain, $path, $site_name = false, $clone_network = false
 			define( 'WP_INSTALLING', true );
 		}
 
-		$new_blog_id = wpmu_create_blog( $domain, $path, $site_name, get_current_user_id(), '', (int) $new_network_id );
+		// there's an ongoing error with wpmu_create_blog that throws a warning if meta is not defined:
+		// http://core.trac.wordpress.org/ticket/20793
+		// temporary fix -- set from current blog's value
+		// Looks like a fix is in for 3.7
+
+		$new_blog_id = wpmu_create_blog( 
+			$domain, 
+			$path, 
+			$site_name, 
+			get_current_user_id(), 
+			array( 'public' => get_option( 'blog_public', false ) ), 
+			(int) $new_network_id )
+		;
 
 		// Bail if blog could not be created
 		if ( is_a( $new_blog_id, 'WP_Error' ) ) {
 			return $new_blog_id;
 		}
+
+		/**
+		 * Fix upload_path for main sites on secondary networks
+		 * This applies only to new installs (WP 3.5+)
+		 */
+
+		// Switch to main network (if it exists)
+		if( network_exists( SITE_ID_CURRENT_SITE ) ) {
+			switch_to_network( SITE_ID_CURRENT_SITE );
+			$use_files_rewriting = get_site_option( 'ms_files_rewriting' );
+			restore_current_network();
+		} else {
+			$use_files_rewriting = get_site_option( 'ms_files_rewriting' );
+		}
+		
+		// Create the upload_path and upload_url_path values
+		if( ! $use_files_rewriting ) {
+
+			// WP_CONTENT_URL is locked to the current site and can't be overridden,
+			//  so we have to replace the hostname the hard way
+			$current_siteurl = get_option( 'siteurl' );
+			$new_siteurl = untrailingslashit( get_blogaddress_by_id( $new_blog_id ) );
+			$upload_url = str_replace( $current_siteurl, $new_siteurl, WP_CONTENT_URL );
+			$upload_url = $upload_url . '/uploads';
+			
+			$upload_dir = WP_CONTENT_DIR;
+			if( 0 === strpos( $upload_dir, ABSPATH ) ) {
+				$upload_dir = substr( $upload_dir, strlen( ABSPATH ) );
+			}
+			$upload_dir .= '/uploads';
+			
+			if ( defined( 'MULTISITE' ) )
+				$ms_dir = '/sites/' . $new_blog_id;
+			else
+				$ms_dir = '/' . $new_blog_id;
+			
+			$upload_dir .= $ms_dir;
+			$upload_url .= $ms_dir;
+			
+			update_blog_option( $new_blog_id, 'upload_path', $upload_dir );
+			update_blog_option( $new_blog_id, 'upload_url_path', $upload_url );
+			
+		}
+
 	}
 
 	// Clone the network meta from an existing network
@@ -212,6 +279,19 @@ function add_network( $domain, $path, $site_name = false, $clone_network = false
 
 		restore_current_network();
 		switch_to_network( $new_network_id );
+
+		foreach($options_to_clone as $option) {
+			if($options_cache[$option] !== false) {
+				
+				// Fix for strange bug that prevents writing the ms_files_rewriting value for new networks
+				if( $option == 'ms_files_rewriting' ) {
+					$wpdb->insert( $wpdb->sitemeta, array('site_id' => $wpdb->siteid, 'meta_key' => $option, 'meta_value' => $options_cache[$option] ) );
+				} else {
+					add_site_option( $option, $options_cache[$option] );
+				}
+			}
+		}
+		unset($options_cache);
 
 		foreach ( $options_to_clone as $option ) {
 			if ( $options_cache[$option] !== false ) {
@@ -471,7 +551,9 @@ function network_options_to_copy() {
 		'banned_email_domains'  => __( 'Banned email domains'                    ),
 		'first_post'            => __( 'Content of first post on a new blog'     ),
 		'limited_email_domains' => __( 'Permitted email domains'                 ),
+		'ms_files_rewriting'    => __( 'Uploaded file handling'                  ),
 		'site_admins'           => __( 'List of network admin usernames'         ),
+		'upload_filetypes'      => __( 'List of allowed file types for uploads'  ),
 		'welcome_email'         => __( 'Content of welcome email'                )
 	) );
 }

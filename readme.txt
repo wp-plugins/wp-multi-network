@@ -1,9 +1,9 @@
 === WP Multi Network ===
-Contributors: johnjamesjacoby, BrianLayman, ddean
+Contributors: johnjamesjacoby, ddean, BrianLayman
 Tags: network, networks, blog, blogs, site, sites, domain, domains, mapping, domain mapping, fun
-Requires at least: WordPress 3.0
-Tested up to: WordPress 3.5
-Stable tag: 1.3.1
+Requires at least: WordPress 3.5
+Tested up to: WordPress 3.6
+Stable tag: 1.4
 
 == Description ==
 
@@ -15,7 +15,10 @@ WP Multi Network allows cape wearing super-admins to create new networks of site
 
 Download and install using the built in WordPress plugin installer.
 
-Activate in the "Plugins" admin panel using the "Activate" link.
+Activate in the "Plugins" network admin panel using the "Network Activate" link.
+
+Comment out the `DOMAIN_CURRENT_SITE` line in your `wp-config.php` file. 
+If you don't have this line, you probably need to <a href="http://codex.wordpress.org/Create_A_Network">enable multisite</a>.
 
 Start planning and creating your networks.
 
@@ -33,11 +36,27 @@ Yes, but it won't do anything. You need to have the multi-site functionality tur
 
 The WordPress support forums: http://wordpress.org/tags/wp-multi-network/
 
+= What's up with uploads? =
+
+As of version 3.5, new WordPress multisite installs use a more efficient way to serve uploaded files. 
+Unfortunately, this doesn't play well with multiple networks (yet). Installs that upgraded from 3.4 or below are not affected.
+
+WP Multi-Network needs to be running to help set the upload path for new sites, so all networks created with this plugin will have it network activated.
+If you disable it on one of your networks, any new site you create on that network will store its uploaded files under that network's main site's uploads folder. It's not pretty.
+
+But just leave this plugin activated and it will take care of everything. :)
+
+Thanks to RavanH for the suggestion!
+
 = Where can I find documentation? =
 
 Not much to talk about really. Check the code for details!
 
 == Changelog ==
+
+= 1.4 =
+* Fix admin pages (let us know if you find something broken)
+* Add support for WP 3.5+ upload handling - thanks, RavanH (see notes: "What's up with uploads?")
 
 = 1.3.1 =
 * Fix prepare() usages
