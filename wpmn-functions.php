@@ -234,8 +234,10 @@ function add_network( $domain, $path, $site_name = false, $clone_network = false
 			$use_files_rewriting = get_site_option( 'ms_files_rewriting' );
 		}
 		
+		global $wp_version;
+		
 		// Create the upload_path and upload_url_path values
-		if( ! $use_files_rewriting ) {
+		if( ! $use_files_rewriting && version_compare( $wp_version, '3.7', '<' ) ) {
 
 			// WP_CONTENT_URL is locked to the current site and can't be overridden,
 			//  so we have to replace the hostname the hard way
@@ -355,11 +357,21 @@ function update_network( $id, $domain, $path = '' ) {
 
 		// Loop through sites and update domain/path
 		foreach ( $sites as $site ) {
-			$domain = str_replace( $network->domain, $domain, $site->domain );
-			$update = array(
-				'domain' => $domain,
-				'path'   => $path
-			);
+			
+			$update = array();
+			
+			if( $network->domain !== $domain ) {
+				$update['domain'] = str_replace( $network->domain, $domain, $site->domain );
+			}
+
+			if( $network->path !== $path ) {
+				$search = sprintf( '|^%s|', preg_quote( $network->path, '|' ) );
+				$update['path'] = preg_replace( $search, $path, $site->path, 1 );
+			}
+
+			if( empty( $update ) )
+				continue;
+			
 			$where = array( 'blog_id' => (int) $site->blog_id );
 			$wpdb->update( $wpdb->blogs, $update, $where );
 

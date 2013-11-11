@@ -1,8 +1,8 @@
 === WP Multi Network ===
 Contributors: johnjamesjacoby, ddean, BrianLayman
 Tags: network, networks, blog, blogs, site, sites, domain, domains, mapping, domain mapping, fun
-Requires at least: WordPress 3.5
-Tested up to: WordPress 3.6
+Requires at least: WordPress 3.6
+Tested up to: WordPress 3.7.1
 Stable tag: 1.4
 
 == Description ==
@@ -53,6 +53,10 @@ Thanks to RavanH for the suggestion!
 Not much to talk about really. Check the code for details!
 
 == Changelog ==
+
+= 1.4.1 =
+* Fix issue when changing network domain or path - contributed by mgburns
+* Improve support for native uploaded file handling
 
 = 1.4 =
 * Fix admin pages (let us know if you find something broken)
