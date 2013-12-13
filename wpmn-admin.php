@@ -296,7 +296,7 @@ class WPMN_Admin {
 					<table class="form-table">
 						<tr><th scope="row"><label for="newName"><?php esc_html_e( 'Network Name' ); ?>:</label></th><td><input type="text" name="name" id="newName" title="<?php esc_html_e( 'A friendly name for your new network' ); ?>" /></td></tr>
 						<tr><th scope="row"><label for="newDom"><?php  esc_html_e( 'Domain'       ); ?>:</label></th><td> http://<input type="text" name="domain" id="newDom" title="<?php esc_html_e( 'The domain for your new network' ); ?>" /></td></tr>
-						<tr><th scope="row"><label for="newPath"><?php esc_html_e( 'Path'         ); ?>:</label></th><td><input type="text" name="path" id="newPath" title="<?php esc_html_e( 'If you are unsure, put in /' ); ?>" /></td></tr>
+						<tr><th scope="row"><label for="newPath"><?php esc_html_e( 'Path'         ); ?>:</label></th><td><input type="text" name="path" id="newPath" value="/" title="<?php esc_html_e( 'If you are unsure, put in /' ); ?>" /></td></tr>
 						<tr><th scope="row"><label for="newSite"><?php esc_html_e( 'Site Name'    ); ?>:</label></th><td><input type="text" name="newSite" id="newSite" title="<?php esc_html_e( 'The name for the new network\'s site.' ); ?>" /></td></tr>
 					</table>
 
