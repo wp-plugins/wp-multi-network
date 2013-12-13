@@ -83,6 +83,12 @@ class WPMN_Admin {
 
 		</script>
 
+		<style type="text/css">
+			#adminmenu #toplevel_page_networks .wp-menu-image:before {
+				content: "\f325";
+				font-family: dashicons;
+			}
+		</style>
 	<?php
 	}
 
