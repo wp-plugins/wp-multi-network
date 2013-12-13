@@ -495,7 +495,7 @@ class WPMN_Admin {
 								<ul style="margin: 0; padding: 0; list-style-type: none;">
 								<?php foreach ( $sites as $site ) : ?>
 									<?php if ( $site->site_id === $network->id ) : ?>
-									<li><?php echo esc_html( sprintf( '%1$s (%2$s%3$s)', $site->name, $site->domai, $site->path ) ); ?></li>
+									<li><?php echo esc_html( sprintf( '%1$s (%2$s%3$s)', $site->name, $site->domain, $site->path ) ); ?></li>
 									<?php endif; ?>
 								<?php endforeach; ?>
 								</ul>
