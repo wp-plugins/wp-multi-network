@@ -264,7 +264,7 @@ class WPMN_Admin {
 			</h2>
 
 			<form action="<?php echo add_query_arg( array( 'action' => 'domains' ), $this->admin_url() ); ?>" method="post" id="domain-search">
-				<?php $wp_list_table->search_box( esc_html_e( 'Search Networks' ), 'networks' ); ?>
+				<?php $wp_list_table->search_box( esc_html__( 'Search Networks' ), 'networks' ); ?>
 				<input type="hidden" name="action" value="domains" />
 			</form>
 
